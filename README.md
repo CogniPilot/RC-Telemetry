@@ -1,84 +1,89 @@
+# Yaapu telemetry for CogniPilot Cerebri
 
-# Yaapu Telemetry Script and Widget
+Flight telemetry on the radio: attitude, flight mode, GPS, battery and status
+messages, drawn on the transmitter screen while you fly.
 
-### please read the [wiki](https://github.com/yaapu/FrskyTelemetryScript/wiki) for more info
+The flight controller runs CogniPilot Cerebri and sends Yaapu passthrough
+telemetry over CRSF. The radio runs EdgeTX 2.11 or newer with these Lua
+scripts. CRSF is the only supported link, over an ELRS (or other Crossfire)
+module. The FrSky S.Port path of the original project has been removed.
 
-This is the home of the Yaapu Telemetry project, an [ArduPilot](http://ardupilot.org/ardupilot/index.html) [LUA](https://www.lua.org/about.html) telemetry script and widget for radios running [OpenTX](https://www.open-tx.org/), [EdgeTX](http://www.edgetx.org) and [Ethos](https://ethos.frsky-rc.com/)
+## Supported radios
 
-*Note: it requires Ardupilot, i.e. it does not work with INAV, betaflight or any other flight stack different from Ardupilot*
+| Radio             | Screen  | Copy to the SD card                               |
+| ----------------- | ------- | ------------------------------------------------- |
+| RadioMaster TX15  | 480x320 | `OTX_ETX/c480x320/SD` + `OTX_ETX/color_common/SD` |
+| RadioMaster Boxer | 128x64  | `OTX_ETX/bw128x64/SD` + `OTX_ETX/bw_common/SD`    |
+| RadioMaster GX12  | 128x64  | `OTX_ETX/bw128x64/SD` + `OTX_ETX/bw_common/SD`    |
 
-Supports:
- - [OpenTX](https://www.open-tx.org) 2.3.8 or later use [this](https://github.com/yaapu/FrskyTelemetryScript/archive/refs/tags/etx-otx-lua52.zip)
- - [EdgeTX](http://www.edgetx.org) up to version 2.10 use [this](https://github.com/yaapu/FrskyTelemetryScript/archive/refs/tags/etx-otx-lua52.zip)
- - [EdgeTX](http://www.edgetx.org) version 2.11 or later use [latest](https://github.com/yaapu/FrskyTelemetryScript/archive/master.zip)
- - [Ethos](https://ethos.frsky-rc.com/) 1.4 or later, download widget [here](https://github.com/yaapu/FrskyTelemetryScript/tree/master/ETHOS) 
- - FRSKY S.Port (setup info [here](https://ardupilot.org/copter/docs/common-connecting-sport-fport.html))
- - TBS Crossfire (setup info [here](https://github.com/yaapu/FrskyTelemetryScript/wiki/Passthrough-over-CRSF-and-ExpressLRS))
- - [ExpressLRS](https://www.expresslrs.org/) (setup info [here](https://github.com/yaapu/FrskyTelemetryScript/wiki/Passthrough-over-CRSF-and-ExpressLRS))
- - [MavToPT](https://github.com/zs6buj/MavlinkToPassthru) project
+## Install on a radio (TX15)
 
-**Downloading**
-- **the latest versions are downloadable from the [clone/download](https://github.com/yaapu/FrskyTelemetryScript/archive/master.zip) button of the [master branch](https://github.com/yaapu/FrskyTelemetryScript/tree/master)** 
+1. Connect the radio to the computer with USB and pick "USB storage (SD)" on the
+   radio, so the SD card appears as a drive.
+2. Copy the *contents* of `OTX_ETX/c480x320/SD` to the root of the card, then
+   the contents of `OTX_ETX/color_common/SD` as well. `WIDGETS/` and `IMAGES/`
+   end up next to the folders already on the card, existing files are replaced.
+3. Eject the drive and unplug the USB cable.
+4. On the radio, open the model, go to *Model setup* and set the external module
+   to CRSF. In the ExpressLRS Lua script set the packet rate to 500 Hz and the
+   telemetry ratio to 1:8, the settings the firmware paces its output for.
+5. Power up the flight controller, open the model's *Telemetry* page and run
+   *Discover new sensors*. Confirm that an `FM` sensor shows up, that is the
+   flight mode name the widget displays.
+6. Go to *Screens*, add a screen of type *Widgets*, choose the full screen
+   layout and set the widget to `yaapu`.
+7. Open *Tools* from the radio menu and run *Yaapu Config* once, so a
+   configuration file is written for this model. Long pressing *Menu* on the
+   widget screen reopens it later.
 
-## Support this project!
+## Install on a radio (Boxer, GX12)
 
-This project is free and will always be.
+Same USB storage step, but copy the contents of `OTX_ETX/bw128x64/SD` and
+`OTX_ETX/bw_common/SD` to the card root. Set the module and the sensors up as
+above, then open the model's *Telemetry* page, scroll to *Screen 1*, set it to
+*Script* and pick `yaapu7`. Run *Yaapu Config* from *Tools* once.
 
-If you like it you can support it by making a donation!
+## ELRS link settings and telemetry budget
 
-[![donate](https://user-images.githubusercontent.com/30294218/61724877-16fa7a80-ad6f-11e9-80de-9771e0b820ae.png)](https://paypal.me/yaapu)
+The firmware paces its telemetry for ELRS 2.4 GHz at a **500 Hz packet rate
+with a 1:8 telemetry ratio**. Set both in the ELRS Lua script on the radio
+(`Tools`, then `ExpressLRS`). At that setting the receiver sends 62 telemetry
+packets per second, which ELRS rates at 2343 bit/s, about 293 bytes/s of CRSF
+frames, and the same channel carries the receiver's link statistics.
 
+The default firmware periods use roughly 230 bytes/s of that:
 
-EdgeTX Color LCD 800x480
+| Frame                              | Rate    | Bytes/s |
+| ---------------------------------- | ------- | ------- |
+| Attitude and heading (passthrough) | 10 Hz   | 180     |
+| GPS position                       | 1 Hz    | 19      |
+| Status, GPS status, home           | 0.5 Hz  | 12      |
+| Flight mode name (`FM`)            | 0.5 Hz plus every mode change | 7 |
+| Battery (CRSF and passthrough)     | 0.33 Hz | 8       |
+| Frame type parameter               | 0.25 Hz | 3       |
 
-<img width="803" height="481" alt="image" src="https://github.com/user-attachments/assets/f1bb3e0a-3cea-4ece-97a2-34876c7e7ad4" />
+Status texts (ready, armed, disarmed, failsafe) and every flight mode change
+are sent the moment they happen, ahead of the scheduled frames. The two
+fastest periods are Kconfig options (`CONFIG_RDD2_CRSF_TELEMETRY_ATTITUDE_PERIOD_MS`
+and `CONFIG_RDD2_CRSF_TELEMETRY_STATUS_PERIOD_MS`). A 1:16 ratio halves the
+budget and needs the attitude period raised to 500 ms; a poorer ratio (1:32
+and below) makes the screen lag, because the receiver drops frames it cannot
+fit rather than queueing them.
 
-<img width="804" height="485" alt="image" src="https://github.com/user-attachments/assets/3d8241fb-1704-4771-a5ac-886768666cbe" />
+## Firmware side
 
+The flight controller needs a Cerebri RDD2 build with
+`CONFIG_RDD2_CRSF_TELEMETRY` enabled, wired to the ELRS receiver over CRSF.
 
-OpenTX/EdgeTX Color LCD 480x272
+## Testing
 
-![image](https://user-images.githubusercontent.com/30294218/198382377-cb48032f-ea5c-4f8d-aa12-f592c1e09358.png)
+`tests/check.sh` compiles every script and runs them on the host against CRSF
+frames captured from the firmware encoder. See `tests/README.md`.
 
-![image](https://user-images.githubusercontent.com/30294218/204914642-869ae6eb-f263-4d3e-b819-c2574f5c2074.png)
+## Credits
 
-![image](https://user-images.githubusercontent.com/30294218/204914982-1040ff20-c5e8-419e-aeee-fff2a6b20bc2.png)
-
-![image](https://user-images.githubusercontent.com/30294218/204915278-1beee89d-ca49-4568-a0a5-742292c7e6cb.png)
-
-EdgeTX Color LCD 320x480
-
-![image](https://user-images.githubusercontent.com/30294218/216000387-f330a204-b674-48ea-bdaf-64ec33871eb2.png)
-
-![image](https://user-images.githubusercontent.com/30294218/216000507-795b129e-8a0a-45cd-99f4-3ffdfc455ce3.png)
-
-![image](https://user-images.githubusercontent.com/30294218/216001171-fc7b3930-efa3-4e40-9c2e-84b022bf73d3.png)
-
-EdgeTX Color LCD 320x240
-
-<img width="329" height="234" alt="image" src="https://github.com/user-attachments/assets/4c1f54bb-629e-47f9-bda1-84e50a143273" />
-<p/>
-<img width="327" height="249" alt="image" src="https://github.com/user-attachments/assets/d8e1f59f-1961-465f-b346-1918a4147bc4" />
-
-OpenTX/EdgeTX BW LCD 212x64
-
-![x9d](https://user-images.githubusercontent.com/30294218/215983189-06106fe8-b0d8-47f5-8e3f-e8d2472028ee.png)
-
-OpenTX/EdgeTX BW LCD 128x64
-
-![x7](https://user-images.githubusercontent.com/30294218/215983214-b11f53a6-90f4-40ba-a29d-90a58cf6f1ff.png)
-
-Ethos Color LCD 480x272 (X10/X12)
-
-![Ethos_X10](https://user-images.githubusercontent.com/30294218/194421471-38b308cf-d0d0-4500-af52-6647e6d993a0.png)
-
-Ethos Color LCD 480x320 (X18)
-
-![Ethos X18](https://user-images.githubusercontent.com/30294218/194421562-4ea6b2dd-ed01-4585-95f1-6b09313b8d3d.png)
-
-Ethos Color LCD 800x480 (X20)
-
-![Ethos X20](https://user-images.githubusercontent.com/30294218/194421598-be8c3dbd-9ac4-494a-bad9-9bd668f105ce.png)
-
-![image](https://github.com/yaapu/FrskyTelemetryScript/assets/30294218/b47f8273-bddb-42c6-91fc-5a732e67c27a)
-
+A fork of [yaapu/FrskyTelemetryScript](https://github.com/yaapu/FrskyTelemetryScript)
+by Alessandro Apostoli, reduced to CRSF passthrough on the radios listed above.
+The [project wiki](https://github.com/yaapu/FrskyTelemetryScript/wiki) covers the
+screens and the configuration options in detail. Licensed under the GNU General
+Public License v3, see `LICENSE`.
