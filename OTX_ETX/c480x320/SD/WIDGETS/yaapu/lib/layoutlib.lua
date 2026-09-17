@@ -33,6 +33,9 @@ local libs
 -- model and opentx version
 local ver, radio, maj, minor, rev = getVersion()
 
+-- left edge of the top bar title, moved right when the CogniPilot mark is drawn
+local titleX = 2
+
 function layoutLib.init(param_status, param_telemetry, param_conf, param_utils, param_libs)
   status = param_status
   telemetry = param_telemetry
@@ -45,11 +48,17 @@ function layoutLib.drawTopBar()
   lcd.setColor(CUSTOM_COLOR, utils.colors.bars)
   -- black bar
   lcd.drawFilledRectangle(0,0, LCD_W, 18, CUSTOM_COLOR)
+  -- CogniPilot mark, the frametype and model name are drawn to its right
+  local mark = utils.getBitmap("cognipilot_20x16")
+  if mark ~= nil then
+    lcd.drawBitmap(mark, 2, 1)
+  end
+  titleX = mark ~= nil and 24 or 2
   -- frametype and model name
   lcd.setColor(CUSTOM_COLOR,utils.colors.white)
   if status.modelString ~= nil then
     local modelString = status.currentScreen == 1 and status.modelString or string.format("[%d] %s",status.currentScreen, status.modelString)
-    lcd.drawText(2, 0, modelString, CUSTOM_COLOR)
+    lcd.drawText(titleX, 0, modelString, CUSTOM_COLOR)
   end
   -- flight time
   local time = getDateTime()
@@ -69,19 +78,29 @@ function layoutLib.drawTopBar()
 end
 
 function layoutLib.drawNoTelemetryData(telemetryEnabled)
-  -- no telemetry data
+  -- splash card while waiting for the link, the alert itself is the blinking
+  -- red frame and the "NO TELEM" in the top bar
   if (not utils.telemetryEnabled()) then
+    local logo = utils.getBitmap("cognipilot_115x48")
+    -- the card grows upwards to hold the logo, the bottom edge stays at 180
+    local top = logo ~= nil and 60 or 108
     lcd.setColor(CUSTOM_COLOR,WHITE)
-    lcd.drawFilledRectangle(88,74, 304, 84, CUSTOM_COLOR)
-    lcd.setColor(CUSTOM_COLOR,utils.colors.red)
-    lcd.drawFilledRectangle(90,76, 300, 80, CUSTOM_COLOR)
+    lcd.drawFilledRectangle(88,top, 304, 180-top, CUSTOM_COLOR)
+    lcd.setColor(CUSTOM_COLOR,utils.colors.black)
+    lcd.drawFilledRectangle(90,top+2, 300, 176-top, CUSTOM_COLOR)
+    if logo ~= nil then
+      lcd.drawBitmap(logo, 183, 66)
+    end
     lcd.setColor(CUSTOM_COLOR,utils.colors.white)
-    lcd.drawText(240, 85, "no telemetry data", DBLSIZE+CUSTOM_COLOR+CENTER)
-    lcd.drawText(240, 125, "Yaapu Telemetry Widget 2.1.x dev".." ("..'7a17b47'..")", SMLSIZE+CUSTOM_COLOR+CENTER)
+    lcd.drawText(240, 116, "CogniPilot Cerebri", MIDSIZE+CUSTOM_COLOR+CENTER)
+    lcd.setColor(CUSTOM_COLOR,utils.colors.red)
+    lcd.drawText(240, 144, "no telemetry data", SMLSIZE+CUSTOM_COLOR+CENTER)
+    lcd.setColor(CUSTOM_COLOR,utils.colors.lightgrey)
+    lcd.drawText(240, 158, "Yaapu Telemetry Widget 2.1.x dev".." ("..'7a17b47'..")", SMLSIZE+CUSTOM_COLOR+CENTER)
     libs.layoutLib.drawTopBar()
     local info = model.getInfo()
     lcd.setColor(CUSTOM_COLOR,WHITE)
-    lcd.drawText(0,0,info.name,CUSTOM_COLOR)
+    lcd.drawText(titleX,0,info.name,CUSTOM_COLOR)
   end
 end
 
@@ -102,6 +121,11 @@ function layoutLib.drawStatusBar(maxRows)
 
   lcd.setColor(CUSTOM_COLOR,utils.colors.bars)
   lcd.drawFilledRectangle(0,277-yDelta-23,480,LCD_H-(277-yDelta-23),CUSTOM_COLOR)
+  -- CogniPilot watermark, drawn first so the message lines stay on top of it
+  local wm = utils.getBitmap("cognipilot_wm_62x26")
+  if wm ~= nil then
+    lcd.drawBitmap(wm, LCD_W-66, LCD_H-28)
+  end
   -- flight time
   lcd.setColor(CUSTOM_COLOR,utils.colors.white)
   lcd.drawTimer(LCD_W, 272-yDelta, model.getTimer(2).value, DBLSIZE+CUSTOM_COLOR+RIGHT)

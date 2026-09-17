@@ -197,6 +197,7 @@ local function drawNoTelemetry(telemetryEnabled,hideNoTelemetry)
   if (not telemetryEnabled() and not hideNoTelemetry) then
     lcd.drawFilledRectangle(12,18, 105, 30, SOLID)
     lcd.drawRectangle(12,18, 105, 30, ERASE)
+    lcd.drawText(30, 20, "CogniPilot", SMLSIZE+INVERS)
     lcd.drawText(30, 29, "no telemetry", INVERS)
     return
   end
