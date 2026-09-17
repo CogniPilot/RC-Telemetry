@@ -1,0 +1,14 @@
+# 0x5006 roll=-12.5 pitch=7.5 deg; 0x5005 vspeed=-3.2 hspeed=9.5 m/s yaw=-0.1 deg; 0x5001 mode=1 armed=1 failsafe=0 throttle=500 milli
+TYPE 80 PAYLOAD f2 03 06 50 46 43 0f 00 05 50 40 7d 11 0e 01 50 02 01 00 01
+# 0x5002 sats=11 fix=3 hdop=1.50 alt=123456 mm; 0x5003 16.80 V 12.5 A 1200 mAh; 0x5004 east=3 north=4 up=10 m
+TYPE 80 PAYLOAD f2 03 02 50 bb 07 80 0c 03 50 a8 36 60 09 04 50 14 00 19 90
+# 0x5007 param id=1 (frame type) value=2 (quadrotor)
+TYPE 80 PAYLOAD f2 01 07 50 02 00 00 01
+# status text severity=6 text="cerebri ready"
+TYPE 80 PAYLOAD f1 06 63 65 72 65 62 72 69 20 72 65 61 64 79 00
+# gps lat=-12.3456789 lon=98.7654321 deg speed=1000 cm/s course=270.00 deg alt=123456 mm sats=11
+TYPE 02 PAYLOAD f8 a4 32 eb 3a de 68 b1 01 68 69 78 04 63 0b
+# battery 16.80 V 12.5 A 1200 mAh 77 percent
+TYPE 08 PAYLOAD 00 a8 00 7d 00 04 b0 4d
+# flight mode "MANUAL"
+TYPE 21 PAYLOAD 4d 41 4e 55 41 4c 00

@@ -100,7 +100,7 @@ function panel.draw(widget, x, y, battId)
   lcd.drawText(x+110, y+98, string.format("%d%s",telemetry.imuTemp, conf.degSymbol), DBLSIZE+RIGHT+CUSTOM_COLOR)
 
   if status.showMinMaxValues == true then
-    drawLib.drawVArrow(x+101+11, y+10 + 8,false,true)
+    libs.drawLib.drawVArrow(x+101+11, y+10 + 8,false,true)
   end
   
   lcd.setColor(CUSTOM_COLOR, lcd.RGB(140, 140, 140))
