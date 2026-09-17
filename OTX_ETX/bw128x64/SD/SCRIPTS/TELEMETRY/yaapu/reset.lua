@@ -109,7 +109,7 @@ local function resetTelemetry(status,telemetry,battery,alarms,transitions)
     { false, 0 , true, 1, 0, false, 0 }, --FS_BAT
     { false, 0 , true, 2, 0, false, 0 }, --FLIGTH_TIME
     { false, 0 , false, 3, 4, false, 0 }, --BATT L1
-    { false, 0 , false, 4, 4, false, 0 } --BATT L2
+    { false, 0 , false, 4, 4, false, 0 }, --BATT L2
     { false, 0 , true, 1, 0, false, 0 }, --FS
     { false, 0 , true, 1, 0, false, 0 }, --
     { false, 0 , true, 1, 0, false, 0 }, --

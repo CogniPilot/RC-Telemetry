@@ -93,8 +93,6 @@ local menuItems = {
   {"screen [3]: center panel:", "CPANE3", 1, { "","","","","","","","","","" }, { 1, 2, 3, 4, 5, 6, 7, 8 ,9 ,10 } },
   {"screen [3]: right panel:", "RPANE3", 1,  { "","","","","","","","","","" }, { 1, 2, 3, 4, 5, 6, 7, 8 ,9 ,10 } },
   {"screen [3]: left panel:", "LPANE3", 1,   { "","","","","","","","","","" }, { 1, 2, 3, 4, 5, 6, 7, 8 ,9 ,10 } },
-  {"enable PX4 flightmodes:", "PX4", 1, { "no", "yes" }, { false, true } },
-  {"enable CRSF support:", "CRSF", 1, { "no", "yes" }, { false, true } },
   {"enable RPM support:", "RPM", 1, { "no", "rpm1", "rpm1+rpm2" }, { 1, 2, 3 } },
   {"enable WIND support:", "WIND", 1, { "no", "yes" }, { false, true } },
   {"emulated page channel:", "STC", 0, 0, 32,nil,0,1 },
@@ -401,8 +399,6 @@ local function applyConfigValues(conf)
     conf.leftPanelFilename[screen] = leftPanelFiles[conf.leftPanel[screen]]
   end
 
-  conf.enablePX4Modes = getMenuItemByName(menuItems,"PX4")
-  conf.enableCRSF = getMenuItemByName(menuItems,"CRSF")
   conf.enableRPM = getMenuItemByName(menuItems,"RPM")
   conf.enableWIND = getMenuItemByName(menuItems,"WIND")
 

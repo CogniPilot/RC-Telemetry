@@ -269,9 +269,7 @@ local conf = {
   leftPanel = "left7",
   altView = "alt7_view",
   defaultBattSource = "na",
-  enablePX4Modes = false,
-  enableHaptic = false,
-  enableCRSF = false
+  enableHaptic = false
 }
 --[[
  ALARM_TYPE_MIN needs arming (min has to be reached first), value below level for grace, once armed is periodic, reset on landing
@@ -349,7 +347,7 @@ local showAltView = false
 local loadCycle = 0
 local initDone = false
 
--- telemetry pop function, either SPort or CRSF
+-- telemetry pop function
 local telemetryPop = nil
 
 -----------------------------
@@ -435,6 +433,17 @@ local function playSound(soundFile,skipHaptic)
 end
 
 ----------------------------------------------
+-- flight mode name as reported by the CRSF flight mode frame, nil when not available
+----------------------------------------------
+local function crsfFlightModeName()
+  local name = getValue("FM")
+  if type(name) == "string" and name ~= "" then
+    return name
+  end
+  return nil
+end
+
+----------------------------------------------
 -- sound file has same name as flightmode all lowercase with .wav extension
 ----------------------------------------------
 local function playFlightMode(flightMode)
@@ -444,11 +453,23 @@ local function playFlightMode(flightMode)
   if conf.disableAllSounds  then
     return
   end
-  if frame.flightModes then
-    if frame.flightModes[flightMode] ~= nil then
-      playFile(soundFileBasePath.."/"..conf.language.."/".. frame.flightModes[flightMode] .. ((frameType=="r" or frameType=="b") and "_r.wav" or ".wav"))
-    end
+  local name = crsfFlightModeName()
+  if name ~= nil then
+    name = string.lower(name)
+  elseif frame.flightModes then
+    name = frame.flightModes[flightMode]
   end
+  if name == nil or name == "" then
+    return
+  end
+  local path = soundFileBasePath.."/"..conf.language.."/"..name..((frameType=="r" or frameType=="b") and "_r.wav" or ".wav")
+  -- modes with no sound file on the sd card are silent
+  local sound = io.open(path,"r")
+  if sound == nil then
+    return
+  end
+  io.close(sound)
+  playFile(path)
 end
 
 local function haversine(lat1, lon1, lat2, lon2)
@@ -1121,14 +1142,6 @@ local function setSensorValues()
   if not telemetryEnabled() then
     return
   end
-  -- CRSF
-  if not conf.enableCRSF then
-    setTelemetryValue(0x060F, 0, 0, battery[16], 13 , 0 , "Fuel")
-    setTelemetryValue(0x020F, 0, 0, battery[7], 2 , 1 , "CURR")
-    setTelemetryValue(0x084F, 0, 0, math.floor(telemetry.yaw), 20 , 0 , "Hdg")
-    setTelemetryValue(0x010F, 0, 0, telemetry.homeAlt*10, 9 , 1 , "Alt")
-    setTelemetryValue(0x083F, 0, 0, telemetry.hSpeed*0.1, 4 , 0 , "GSpd")
-  end
   setTelemetryValue(0x021F, 0, 0, battery[4]*10, 1 , 2 , "VFAS")
   setTelemetryValue(0x011F, 0, 0, telemetry.vSpeed, 5 , 1 , "VSpd")
   setTelemetryValue(0x082F, 0, 0, math.floor(telemetry.gpsAlt*0.1), 9 , 0 , "GAlt")
@@ -1231,9 +1244,9 @@ local function loadFlightModes()
   end
   if telemetry.frameType ~= -1 then
     if frameTypes[telemetry.frameType] == "c" then
-      frame = doLibrary(conf.enablePX4Modes and "copter_px4" or "copter")
+      frame = doLibrary("copter")
     elseif frameTypes[telemetry.frameType] == "p" then
-      frame = doLibrary(conf.enablePX4Modes and "plane_px4" or "plane")
+      frame = doLibrary("plane")
     elseif frameTypes[telemetry.frameType] == "r" or frameTypes[telemetry.frameType] == "b" then
       frame = doLibrary("rover")
     elseif frameTypes[telemetry.frameType] == "a" then
@@ -1249,11 +1262,14 @@ end
 
 
 local function getFlightMode()
+  local name = crsfFlightModeName()
+  if name ~= nil then
+    return name
+  end
   if frame.flightModes then
     return frame.flightModes[telemetry.flightMode]
-  else
-    return nil
   end
+  return nil
 end
 
 ---------------------------------
@@ -1324,7 +1340,7 @@ local function checkEvents()
 
   -- flightmode transitions have a grace period to prevent unwanted flightmode call out
   -- on quick radio mode switches
-  if frame.flightModes ~= nil and checkTransition(1,telemetry.flightMode) then
+  if checkTransition(1,telemetry.flightMode) then
     playFlightMode(telemetry.flightMode)
   end
 
@@ -1429,15 +1445,13 @@ local function background()
     checkCellVoltage()
 
 
-    if conf.enableCRSF then
-      -- apply same algo used by ardupilot to estimate a 0-100 rssi value
-      -- rssi = roundf((1.0f - (rssi_dbm - 50.0f) / 70.0f) * 255.0f);
-      local rssi_dbm = math.abs(getValue("1RSS"))
-      if getValue("ANT") ~= 0 then
-        math.abs(getValue("2RSS"))
-      end
-      rssiCRSF = string.format("%d/%d", math.min(100, math.floor(0.5 + ((1-(rssi_dbm - 50)/70)*100))), getValue("RFMD"))
-   end
+    -- apply same algo used by ardupilot to estimate a 0-100 rssi value
+    -- rssi = roundf((1.0f - (rssi_dbm - 50.0f) / 70.0f) * 255.0f);
+    local rssi_dbm = math.abs(getValue("1RSS"))
+    if getValue("ANT") ~= 0 then
+      math.abs(getValue("2RSS"))
+    end
+    rssiCRSF = string.format("%d/%d", math.min(100, math.floor(0.5 + ((1-(rssi_dbm - 50)/70)*100))), getValue("RFMD"))
 
     -- if we do not see terrain data for more than 5 sec we assume TERRAIN_ENABLE = 0
     if status.terrainEnabled == 1 and (now - status.terrainLastData) > 500 then
@@ -1480,11 +1494,7 @@ local function loadConfig()
 
   -- ok configuration loaded
   status.battsource = conf.defaultBattSource
-  -- CRSF or SPORT?
-  telemetryPop = sportTelemetryPop
-  if conf.enableCRSF == true then
-    telemetryPop = crossfirePop
-  end
+  telemetryPop = crossfirePop
   -- configuration loaded, releasing menu library memory
   clearTable(menuLib)
   menuLib = nil
@@ -1633,7 +1643,7 @@ local function run(event)
     lcd.drawFilledRectangle(0,57, 128, 8, FORCE)
 
     if drawLib ~= nil then
-      drawLib.drawTopBar(getFlightMode(), telemetry.simpleMode, status.flightTime, telemetryEnabled, conf.enableCRSF and rssiCRSF or getRSSI())
+      drawLib.drawTopBar(getFlightMode(), telemetry.simpleMode, status.flightTime, telemetryEnabled, rssiCRSF)
       drawLib.drawBottomBar(statusBarMsg, lastMsgTime)
       drawLib.drawNoTelemetry(telemetryEnabled, hideNoTelemetry)
     end

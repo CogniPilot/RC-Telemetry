@@ -56,8 +56,6 @@ local menuItems = {
   {"right panel layout:", "RPANE", 1, { "def", "min" }, { 1, 2 } },
   {"left panel layout:", "LPANE", 1, { "def","m2f" }, { 1, 2 } },
   {"second view layout:", "AVIEW", 1, { "def" }, { 1 } },
-  {"enable px4 modes:", "PX4", 1, { "no", "yes" }, { false, true } },
-  {"enable CRSF:", "CRSF", 1, { "no", "yes" }, { false, true } },
 }
 
 local menu  = {
@@ -124,8 +122,6 @@ local function applyConfigValues(items,conf)
   conf.rangeFinderMax = getMenuItemByName(items,"RM")
   conf.horSpeedMultiplier, conf.horSpeedLabel = getMenuItemByName(items,"HSPD")
   conf.vertSpeedMultiplier, conf.vertSpeedLabel = getMenuItemByName(items,"VSPD")
-  conf.enablePX4Modes = getMenuItemByName(items,"PX4")
-  conf.enableCRSF = getMenuItemByName(items,"CRSF")
 
   conf.centerPanel = centerPanelFiles[getMenuItemByName(items,"CPANE")]
   conf.rightPanel = rightPanelFiles[getMenuItemByName(items,"RPANE")]

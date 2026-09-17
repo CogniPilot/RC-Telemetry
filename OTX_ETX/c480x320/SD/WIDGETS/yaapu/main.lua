@@ -51,8 +51,6 @@ local conf = {
   horSpeedLabel = "m/s",
   vertSpeedLabel = "m/s",
   maxHdopAlert = 2,
-  enablePX4Modes = false,
-  enableCRSF = false,
   -- layout and multiple screens support
   widgetLayout = 1,
   widgetLayoutFilename = "layout_def",
@@ -447,7 +445,8 @@ local soundFileBasePath = "/WIDGETS/Yaapu/sounds"
 local basePath = "/WIDGETS/Yaapu/"
 local libBasePath = basePath.."lib/"
 -- telemetry loops
-local telemetryPopLoops = 15
+-- a low value prevents CPU Kill when decoding multiple packet frames
+local telemetryPopLoops = 8
 -- layouts
 local layout = nil
 local centerPanel = {nil, nil, nil}
@@ -738,6 +737,20 @@ utils.playSound = function(soundFile,skipHaptic)
   playFile(soundFileBasePath .."/"..conf.language.."/".. soundFile..".wav")
 end
 
+-- the flight controller reports its mode name in the CRSF flight mode frame,
+-- which EdgeTX exposes as the "FM" text sensor
+local function crsfFlightModeName()
+  local fm = getValue("FM")
+  if type(fm) == "string" and #fm > 0 then
+    return fm
+  end
+  return nil
+end
+
+local function flightModeName(flightMode)
+  return crsfFlightModeName() or (status.currentFrameType.flightModes and status.currentFrameType.flightModes[flightMode])
+end
+
 utils.playSoundByFlightMode = function(flightMode)
   if conf.enableHaptic then
     playHaptic(15,0)
@@ -745,13 +758,20 @@ utils.playSoundByFlightMode = function(flightMode)
   if conf.disableAllSounds then
     return
   end
-  if status.currentFrameType.flightModes then
-    if status.currentFrameType.flightModes[flightMode] ~= nil then
-      utils.lcdBacklightOn()
-      -- rover sound files differ because they lack "flight" word
-      playFile(soundFileBasePath.."/"..conf.language.."/".. status.currentFrameType.flightModes[flightMode] .. ((status.frameTypes[telemetry.frameType]=="r" or status.frameTypes[telemetry.frameType]=="b") and "_r.wav" or ".wav"))
-    end
+  local modeName = flightModeName(flightMode)
+  if modeName == nil or modeName == "" then
+    return
   end
+  -- rover sound files differ because they lack "flight" word
+  local soundFile = soundFileBasePath.."/"..conf.language.."/"..string.lower(modeName)..((status.frameTypes[telemetry.frameType]=="r" or status.frameTypes[telemetry.frameType]=="b") and "_r.wav" or ".wav")
+  -- modes without a recorded call out stay silent
+  local f = io.open(soundFile,"r")
+  if f == nil then
+    return
+  end
+  io.close(f)
+  utils.lcdBacklightOn()
+  playFile(soundFile)
 end
 
 local function updateHash(c)
@@ -1512,31 +1532,13 @@ local function checkLandingStatus()
 end
 
 local function drainTelemetryQueues()
-  if conf.enableCRSF == false then
-    -- SPORT
-    local i = 0
-    -- empty sport queue
-    local a,b,c,d = sportTelemetryPop()
-    while a ~= null and i < 50 do
-      a,b,c,d = sportTelemetryPop()
-      i = i + 1
-    end
-  else
-    -- CRSF
-    local i = 0
-    -- empty sport queue
-    local a,b = crossfireTelemetryPop()
-    while a ~= null and i < 50 do
-      a,b = crossfireTelemetryPop()
-      i = i + 1
-    end
+  local i = 0
+  -- empty crsf queue
+  local a,b = crossfireTelemetryPop()
+  while a ~= null and i < 50 do
+    a,b = crossfireTelemetryPop()
+    i = i + 1
   end
-end
-
-local function drawRssi()
-  -- RSSI
-  lcd.drawText(323, 0, "RS:", 0+CUSTOM_COLOR)
-  lcd.drawText(323 + 30,0, getRSSI(), 0+CUSTOM_COLOR)
 end
 
 local function drawRssiCRSF()
@@ -1788,44 +1790,16 @@ local function setSensorValues()
   if not utils.telemetryEnabled() then
     return
   end
-  if conf.enableCRSF then
-    -- CRSF
-    setTelemetryValue(0x07, 0, 0, telemetry.vSpeed, 5 , 2 , "VSpd")
+  setTelemetryValue(0x07, 0, 0, telemetry.vSpeed, 5 , 2 , "VSpd")
 
-    if conf.enableRPM == 2  or conf.enableRPM == 3 then
-      setTelemetryValue(0, 0, 1, telemetry.rpm1, 18 , 0 , "RPM1")
-    end
-    if conf.enableRPM == 3 then
-      setTelemetryValue(0, 0, 2, telemetry.rpm2, 18 , 0 , "RPM2")
-    end
-    if status.airspeedEnabled == 1 then
-      setTelemetryValue(0, 0, 3, telemetry.airspeed*0.1, 4 , 0 , "ASPD")
-    end
-  else
-    -- FRSKY
-    setTelemetryValue(0x060F, 0, 0, status.battery[16], 13 , 0 , "Fuel")
-    setTelemetryValue(0x020F, 0, 0, status.battery[7], 2 , 1 , "CURR")
-    setTelemetryValue(0x084F, 0, 0, math.floor(telemetry.yaw), 20 , 0 , "Hdg")
-    setTelemetryValue(0x010F, 0, 0, telemetry.homeAlt*10, 9 , 1 , "Alt")
-    setTelemetryValue(0x083F, 0, 0, telemetry.hSpeed*0.1, 5 , 0 , "GSpd")
-    setTelemetryValue(0x021F, 0, 0, status.battery[4]*10, 1 , 2 , "VFAS")
-    setTelemetryValue(0x011F, 0, 0, telemetry.vSpeed, 5 , 1 , "VSpd")
-    setTelemetryValue(0x082F, 0, 0, math.floor(telemetry.gpsAlt*0.1), 9 , 0 , "GAlt")
-    setTelemetryValue(0x041F, 0, 0, telemetry.imuTemp, 11 , 0 , "IMUt")
-    setTelemetryValue(0x060F, 0, 1, telemetry.statusArmed*100, 0 , 0 , "ARM")
-    setTelemetryValue(0x050D, 0, 0, telemetry.throttle, 13 , 0 , "Thr")
-
-    if conf.enableRPM == 2  or conf.enableRPM == 3 then
-      setTelemetryValue(0x050E, 0, 0, telemetry.rpm1, 18 , 0 , "RPM1")
-    end
-    if conf.enableRPM == 3 then
-      setTelemetryValue(0x050F, 0, 0, telemetry.rpm2, 18 , 0 , "RPM2")
-    end
-    if status.airspeedEnabled == 1 then
-      setTelemetryValue(0x0AF, 0, 0, telemetry.airspeed*0.1, 4 , 0 , "ASpd")
-    end
-    --setTelemetryValue(0x070F, 0, 0, telemetry.roll, 20 , 0 , "ROLL")
-    --setTelemetryValue(0x071F, 0, 0, telemetry.pitch, 20 , 0 , "PTCH")
+  if conf.enableRPM == 2  or conf.enableRPM == 3 then
+    setTelemetryValue(0, 0, 1, telemetry.rpm1, 18 , 0 , "RPM1")
+  end
+  if conf.enableRPM == 3 then
+    setTelemetryValue(0, 0, 2, telemetry.rpm2, 18 , 0 , "RPM2")
+  end
+  if status.airspeedEnabled == 1 then
+    setTelemetryValue(0, 0, 3, telemetry.airspeed*0.1, 4 , 0 , "ASPD")
   end
 end
 
@@ -2014,9 +1988,9 @@ local function loadFlightModes()
   end
   if telemetry.frameType ~= -1 then
     if status.frameTypes[telemetry.frameType] == "c" then
-      status.currentFrameType= utils.doLibrary(conf.enablePX4Modes and "copter_px4" or "copter")
+      status.currentFrameType= utils.doLibrary("copter")
     elseif status.frameTypes[telemetry.frameType] == "p" then
-      status.currentFrameType= utils.doLibrary(conf.enablePX4Modes and "plane_px4" or "plane")
+      status.currentFrameType= utils.doLibrary("plane")
     elseif status.frameTypes[telemetry.frameType] == "r" or status.frameTypes[telemetry.frameType] == "b" then
       status.currentFrameType= utils.doLibrary("rover")
     elseif status.frameTypes[telemetry.frameType] == "a" then
@@ -2118,7 +2092,8 @@ local function checkEvents()
     -- check if we should enable waypoint plotting for this flight mode
     -- supported modes are AUTO, GUIDED, LOITER, RTL, QRTL, QLOITER, QLAND, FOLLOW, ZIGZAG
     -- see /MAVProxy/modules/mavproxy_map/__init__.py
-    if utils.wpEnabledModeList[string.upper(status.currentFrameType.flightModes[telemetry.flightMode])] == 1 then
+    local modeName = flightModeName(telemetry.flightMode)
+    if modeName ~= nil and utils.wpEnabledModeList[string.upper(modeName)] == 1 then
       status.wpEnabledMode = 1
     else
       status.wpEnabledMode = 0
@@ -2153,7 +2128,7 @@ end
 
 
 
--- telemetry pop function, either SPort or CRSF
+-- telemetry pop function
 local telemetryPop = nil
 
 local function crossfirePop()
@@ -2209,16 +2184,8 @@ local function loadConfig(init)
   status.plotSources = menuLib.plotSources
   -- ok configuration loaded
   status.battsource = conf.defaultBattSource
-  -- CRSF or SPORT?
-  telemetryPop = sportTelemetryPop
-  utils.drawRssi = drawRssi
-  if conf.enableCRSF then
-    telemetryPop = crossfirePop
-    utils.drawRssi = drawRssiCRSF
-    -- we need a lower value here to prevent CPU Kill
-    -- when decoding multiple packet frames
-    telemetryPopLoops = 8
-  end
+  telemetryPop = crossfirePop
+  utils.drawRssi = drawRssiCRSF
   -- do not reset layout on boot
   if init == nil then
     resetLayoutPending = true
@@ -2266,31 +2233,29 @@ local function task5HzA(widget, now)
 end
 
 local function task2HzA(widget, now)
-  if conf.enableCRSF then
-    -- apply same algo used by ardupilot to estimate a 0-100 rssi value
-    -- rssi = roundf((1.0f - (rssi_dbm - 50.0f) / 70.0f) * 255.0f);
-    local rssi_dbm = math.abs(getValue("1RSS"))
-    if getValue("ANT") ~= 0 then
-      rssi_dbm = math.abs(getValue("2RSS"))
-    end
-    telemetry.rssiCRSF = math.min(100, math.floor(0.5 + ((1-(rssi_dbm - 50)/70)*100)))
+  -- apply same algo used by ardupilot to estimate a 0-100 rssi value
+  -- rssi = roundf((1.0f - (rssi_dbm - 50.0f) / 70.0f) * 255.0f);
+  local rssi_dbm = math.abs(getValue("1RSS"))
+  if getValue("ANT") ~= 0 then
+    rssi_dbm = math.abs(getValue("2RSS"))
+  end
+  telemetry.rssiCRSF = math.min(100, math.floor(0.5 + ((1-(rssi_dbm - 50)/70)*100)))
 
-    if getValue("RFMD") == 1 then
-      -- GPS
-      telemetry.numSats = getValue("Sats")
-      -- BATT 1
-      telemetry.batt1volt = getValue("RxBt") * 10     -- V to dV
-      telemetry.batt1current = getValue("Curr") * 10  -- A to dA
-      telemetry.batt1mah = getValue("Capa")           -- mAh
-      -- VELANDYAW
-      telemetry.hSpeed = getValue("GSpd") * 2.777     -- km/h to dm/s
-      -- ROLLPITCH
-      telemetry.roll = math.deg(getValue("Roll"))     -- rad to deg
-      telemetry.pitch = math.deg(getValue("Ptch"))    -- rad to deg
-      telemetry.yaw = math.deg(getValue("Yaw"))       -- rad to deg
-      -- VFR
-      telemetry.homeAlt = getValue("Alt")             -- m
-    end
+  if getValue("RFMD") == 1 then
+    -- GPS
+    telemetry.numSats = getValue("Sats")
+    -- BATT 1
+    telemetry.batt1volt = getValue("RxBt") * 10     -- V to dV
+    telemetry.batt1current = getValue("Curr") * 10  -- A to dA
+    telemetry.batt1mah = getValue("Capa")           -- mAh
+    -- VELANDYAW
+    telemetry.hSpeed = getValue("GSpd") * 2.777     -- km/h to dm/s
+    -- ROLLPITCH
+    telemetry.roll = math.deg(getValue("Roll"))     -- rad to deg
+    telemetry.pitch = math.deg(getValue("Ptch"))    -- rad to deg
+    telemetry.yaw = math.deg(getValue("Yaw"))       -- rad to deg
+    -- VFR
+    telemetry.homeAlt = getValue("Alt")             -- m
   end
   checkEvents()
   checkLandingStatus()
@@ -2330,12 +2295,10 @@ end
 local function task2HzC(widget, now)
   calcBattery()
   -- flight mode
-  if status.currentFrameType.flightModes then
-    status.strFlightMode = status.currentFrameType.flightModes[telemetry.flightMode]
-    if status.strFlightMode ~= nil and telemetry.simpleMode > 0 then
-      local strSimpleMode = telemetry.simpleMode == 1 and "(S)" or "(SS)"
-      status.strFlightMode = string.format("%s%s",status.strFlightMode,strSimpleMode)
-    end
+  status.strFlightMode = flightModeName(telemetry.flightMode)
+  if status.strFlightMode ~= nil and telemetry.simpleMode > 0 then
+    local strSimpleMode = telemetry.simpleMode == 1 and "(S)" or "(SS)"
+    status.strFlightMode = string.format("%s%s",status.strFlightMode,strSimpleMode)
   end
 
   if telemetry.lat ~= nil and telemetry.lon ~= nil then

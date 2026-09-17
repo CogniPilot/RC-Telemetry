@@ -66,9 +66,7 @@ local conf = {
   leftPanel = nil,
   altView = nil,
   defaultBattSource = "na",
-  enablePX4Modes = false,
-  enableHaptic = false,
-  enableCRSF = false
+  enableHaptic = false
 }
 
 local function doLibrary(filename)
