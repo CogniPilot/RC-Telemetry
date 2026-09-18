@@ -99,10 +99,10 @@ local menuItems = {
   {"emulated wheel channel:", "SWC", 0, 0, 32,nil,0,1 },
   {"emulated wheel delay (secs):", "SWCD", 1, 0, 50,"sec",PREC1, 1 },
   {"GPS coordinates format:", "GPS", 1, { "DMS", "decimal" }, { 1, 2 } },
-  {"map provider:", "MAPP", 1, { "GMapCatcher", "Google", "QGIS" }, { 1, 2, 3 } },
+  {"map provider:", "MAPP", 2, { "GMapCatcher", "Google", "QGIS" }, { 1, 2, 3 } },
   {"map type:", "MAPT", 1, { "", "", "", "", "", "" }, { "", "", "", "", "", "" } },
-  {"map zoom level def value:", "MAPZ", -2, -2, 17,nil,0,1 },
-  {"map zoom level min value:", "MAPmZ", -2, -2, 17,nil,0,1 },
+  {"map zoom level def value:", "MAPZ", 16, -2, 17,nil,0,1 },
+  {"map zoom level min value:", "MAPmZ", 12, -2, 17,nil,0,1 },
   {"map zoom level max value:", "MAPMZ", 17, -2, 17,nil,0,1 },
   {"map grid lines:", "MAPG", 1, { "yes", "no" }, { true, false } },
   -- allow up to 20 plot sources to be defined by updateMenuItems()

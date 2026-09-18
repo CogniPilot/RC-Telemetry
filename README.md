@@ -70,6 +70,26 @@ budget and needs the attitude period raised to 500 ms; a poorer ratio (1:32
 and below) makes the screen lag, because the receiver drops frames it cannot
 fit rather than queueing them.
 
+## Map page
+
+The widget's pages are chosen with its "Screen Type" option: 1 is the HUD,
+2 the message history, 5 the satellite map (6 plot, 7 and 8 statistics). Put a
+second `yaapu` widget on another screen with Screen Type 5, or use the page
+toggle in Yaapu Config. The widget defaults to map provider `Google`, map type
+`GoogleSatelliteMap`, zoom 16 (12 to 17), which matches the shipped tiles; a
+change in Yaapu Config is only written when the edited value is confirmed with
+ENTER. The map centres on the aircraft's GPS position from the `GPS` telemetry
+sensor, so discover sensors once with the flight controller on, and it draws
+once there is a fix.
+
+The shipped tiles cover an 8 km radius around Lafayette, Indiana. Tiles for
+another area are one command, then copy `OTX_ETX/color_common/SD/IMAGES` to
+the card again:
+
+```
+tools/make_map_tiles.py LAT LON RADIUS_KM
+```
+
 ## Firmware side
 
 The flight controller needs a Cerebri RDD2 build with
