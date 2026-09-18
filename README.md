@@ -47,6 +47,12 @@ been discovered, so with an undiscovered sensor the mode line stays blank, the
 map page stays black and the arm state never changes, even though the frames
 arrive.
 
+Discovery also creates the mechanical RPM of the four motors. EdgeTX names all
+four sensors `RPM` and tells them apart by their instance, so the telemetry page
+lists `RPM` four times. Set *enable RPM support* to `rpm1+rpm2` in *Yaapu
+Config* and the TX15 widget draws them as four bars labelled M1 to M4 below the
+HUD.
+
 Run *Discover new sensors* on the model's *Telemetry* page with the flight
 controller powered, the receiver bound and, for `GPS`, a fix or at least a few
 seconds of GPS frames. Stop the discovery once the list is stable. Repeat it

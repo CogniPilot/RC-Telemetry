@@ -150,6 +150,15 @@ local function runWidget()
     model = "modelname", radio = "tx15", lcdw = 480, lcdh = 320,
   }
 
+  -- the per motor RPM bars are gated by "enable RPM support" (RPM:3)
+  local cfgPath = "/WIDGETS/Yaapu/cfg/modelname.cfg"
+  local cfg = assert(io.open(cfgPath, "r"))
+  local cfgText = io.read(cfg, 500)
+  io.close(cfg)
+  cfg = assert(io.open(cfgPath, "w"))
+  io.write(cfg, cfgText .. ",RPM:3")
+  io.close(cfg)
+
   local w
   if not protect(label .. ": load", function()
     w = assert(loadScript("/WIDGETS/yaapu/main.lua"), "main.lua not found")()
@@ -177,6 +186,12 @@ local function runWidget()
   checkDecoded(label)
   checkSensors(label, { { "VSpd", function(t) return t.vSpeed end } })
   check(label .. ": draws flight mode " .. tostring(fmName), stub.drewText(fmName))
+  -- the four motor RPM sensors, all labelled "RPM" and told apart by instance
+  for i = 1, 4 do
+    near(label .. ": RPM sensor instance " .. (i - 1) .. " -> telemetry.rpm" .. i,
+      stub.telemetry["rpm" .. i], stub.rpm[i], 0)
+  end
+  check(label .. ": draws the motor RPM bars", stub.drewText("M4"))
 
   -- the other screens: messages, min/max, dual battery
   for page = 2, 4 do

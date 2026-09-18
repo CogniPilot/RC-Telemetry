@@ -74,16 +74,26 @@ function layout.draw(widget, customSensors, leftPanel, centerPanel, rightPanel)
     leftPanel[status.currentScreen].draw(widget, 0, 18, 0)
   end
   lcd.setColor(CUSTOM_COLOR,colorLabel)
-  -- RPM 1
-  if conf.enableRPM == 2  or conf.enableRPM == 3 then
-    lcd.drawText(10, 150, "RPM 1", SMLSIZE+CUSTOM_COLOR)
-    libs.drawLib.drawBar("rpm1", 10, 150+15, 90, 24, utils.colors.darkyellow, math.abs(telemetry.rpm1), MIDSIZE)
-  end
-  -- RPM 2
-  lcd.setColor(CUSTOM_COLOR,colorLabel)
-  if conf.enableRPM == 3 then
-    lcd.drawText(115, 150, "RPM 2", SMLSIZE+CUSTOM_COLOR+0)
-    libs.drawLib.drawBar("rpm2", 115, 150+15, 90, 24, utils.colors.darkyellow, math.abs(telemetry.rpm2), MIDSIZE)
+  if conf.enableRPM == 3 and status.rpmSensorCount > 2 then
+    -- one bar per motor when the RPM sensors are there
+    for i = 1, 4 do
+      local x = 10 + 50*(i-1)
+      lcd.setColor(CUSTOM_COLOR,colorLabel)
+      lcd.drawText(x, 150, "M"..i, SMLSIZE+CUSTOM_COLOR)
+      libs.drawLib.drawBar("rpm"..i, x, 150+15, 45, 24, utils.colors.darkyellow, math.abs(telemetry["rpm"..i]), SMLSIZE)
+    end
+  else
+    -- RPM 1
+    if conf.enableRPM == 2  or conf.enableRPM == 3 then
+      lcd.drawText(10, 150, "RPM 1", SMLSIZE+CUSTOM_COLOR)
+      libs.drawLib.drawBar("rpm1", 10, 150+15, 90, 24, utils.colors.darkyellow, math.abs(telemetry.rpm1), MIDSIZE)
+    end
+    -- RPM 2
+    lcd.setColor(CUSTOM_COLOR,colorLabel)
+    if conf.enableRPM == 3 then
+      lcd.drawText(115, 150, "RPM 2", SMLSIZE+CUSTOM_COLOR+0)
+      libs.drawLib.drawBar("rpm2", 115, 150+15, 90, 24, utils.colors.darkyellow, math.abs(telemetry.rpm2), MIDSIZE)
+    end
   end
   -- throttle %
   lcd.setColor(CUSTOM_COLOR,colorLabel)

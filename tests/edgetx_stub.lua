@@ -5,6 +5,7 @@
 -- stub.reset{roots=..., model=..., lcdw=..., lcdh=...}  prepare a fresh run
 -- stub.pushFrame(type, bytes)                           queue a CRSF frame
 -- stub.setFlightModeName(s)                             what getValue("FM") returns
+-- stub.rpm                                              the four motor RPM values
 -- stub.calls                                            recorded API calls
 -- stub.sensors                                          last setTelemetryValue per name
 -- stub.telemetry                                        the script's telemetry table
@@ -198,9 +199,28 @@ end
 function getDateTime()
   return { year = 2026, mon = 1, day = 1, hour = 12, min = 30, sec = 15 }
 end
-function getFieldInfo(name) return { id = 1, name = name, desc = name, unit = 0, prec = 0 } end
+-- a telemetry sensor slot i is the source MIXSRC_FIRST_TELEM + 3*i, which
+-- getFieldInfo reports for the multiple field name "telem"..(i+1)
+local TELEM_FIRST = 300
+
+function getFieldInfo(name)
+  local n = string.match(tostring(name), "^telem(%d+)$")
+  local id = n ~= nil and TELEM_FIRST + 3 * (tonumber(n) - 1) or 1
+  return { id = id, name = name, desc = name, unit = 0, prec = 0 }
+end
+
 function getValue(id)
   if id == "FM" then return stub.fm end
+  -- all four CRSF RPM sensors are labelled "RPM", so a lookup by name reaches
+  -- the first one only and "RPM2".."RPM4" do not exist
+  if id == "RPM" then return stub.rpm[1] end
+  if id == "RPM2" or id == "RPM3" or id == "RPM4" then return nil end
+  if type(id) == "number" and id >= TELEM_FIRST then
+    local sensor = stub.sensorList[math.floor((id - TELEM_FIRST) / 3) + 1]
+    if sensor ~= nil and sensor.id % 0x100 == 0x0C then
+      return stub.rpm[sensor.instance + 1]
+    end
+  end
   return 0
 end
 function setTelemetryValue(id, subId, instance, value, unit, prec, name)
@@ -224,6 +244,13 @@ end
 
 model = {
   getInfo = function() return { name = stub.model, bitmap = "" } end,
+  -- unused sensor slots read back empty, nil comes only past the end of the
+  -- model sensor table
+  getSensor = function(i)
+    if i >= 60 then return nil end
+    local s = stub.sensorList[i + 1] or { name = "", id = 0, instance = 0 }
+    return { type = 0, name = s.name, unit = 0, prec = 0, id = s.id, instance = s.instance }
+  end,
   getTimer = function(i) return stub.timers[i] or { mode = 0, start = 0, value = 0 } end,
   setTimer = function(i, t)
     local cur = stub.timers[i] or { mode = 0, start = 0, value = 0 }
@@ -244,6 +271,17 @@ function stub.reset(opts)
   stub.rssi = opts.rssi or 70
   stub.now = 1000
   stub.fm = nil
+  -- The sensors EdgeTX creates from the CRSF RPM frame, one per motor: they all
+  -- carry the label "RPM" and the id 0x0C, only the instance tells them apart.
+  stub.rpm = { 1234, 2345, 3456, 4567 }
+  stub.sensorList = {
+    { name = "RxBt", id = 0x1001, instance = 0 },
+    { name = "RPM",  id = 0x0C,   instance = 0 },
+    { name = "RPM",  id = 0x0C,   instance = 1 },
+    { name = "1RSS", id = 0x1002, instance = 0 },
+    { name = "RPM",  id = 0x0C,   instance = 2 },
+    { name = "RPM",  id = 0x0C,   instance = 3 },
+  }
   stub.queue, stub.queueIdx = {}, 1
   stub.calls, stub.sensors, stub.timers = {}, {}, {}
   stub.telemetry = nil

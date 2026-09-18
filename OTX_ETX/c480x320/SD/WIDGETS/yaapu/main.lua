@@ -149,6 +149,8 @@ local telemetry = {
   -- RPM
   rpm1 = 0,
   rpm2 = 0,
+  rpm3 = 0,
+  rpm4 = 0,
   -- TERRAIN
   heightAboveTerrain = 0,
   terrainUnhealthy = 0,
@@ -330,6 +332,8 @@ status.terrainEnabled = 0
 status.terrainLastData = getTime()
 -- AIRSPEED
 status.airspeedEnabled = 0
+-- number of motor RPM sensors that have been seen
+status.rpmSensorCount = 0
 -- PLOT data
 status.plotSources = nil
 -- UNIT CONVERSION
@@ -1626,6 +1630,8 @@ local function resetTelemetry()
   -- RPM
   telemetry.rpm1 = 0
   telemetry.rpm2 = 0
+  telemetry.rpm3 = 0
+  telemetry.rpm4 = 0
   -- TERRAIN
   telemetry.heightAboveTerrain = 0
   telemetry.terrainUnhealthy = 0
@@ -1802,10 +1808,11 @@ local function setSensorValues()
   end
   setTelemetryValue(0x07, 0, 0, telemetry.vSpeed, 5 , 2 , "VSpd")
 
-  if conf.enableRPM == 2  or conf.enableRPM == 3 then
+  -- values read back from the RPM sensors are not published again
+  if status.rpmSensorCount == 0 and (conf.enableRPM == 2 or conf.enableRPM == 3) then
     setTelemetryValue(0, 0, 1, telemetry.rpm1, 18 , 0 , "RPM1")
   end
-  if conf.enableRPM == 3 then
+  if status.rpmSensorCount == 0 and conf.enableRPM == 3 then
     setTelemetryValue(0, 0, 2, telemetry.rpm2, 18 , 0 , "RPM2")
   end
   if status.airspeedEnabled == 1 then
@@ -2228,6 +2235,34 @@ end
 local timerPage = getTime()
 local timerWheel = getTime()
 local updateCog = 0
+-- The sensors EdgeTX creates from the CRSF RPM frame all carry the same "RPM"
+-- label and only differ by their instance, so they cannot be read by name. They
+-- are located by scanning the model sensor table for the CRSF RPM id (0x0C in
+-- the low byte, the high byte is the source id of the frame) and are then read
+-- through the source id of their sensor slot, MIXSRC_FIRST_TELEM + 3*index,
+-- which getFieldInfo("telem"..(index+1)) reports.
+local rpmSourceIds = {}
+local rpmSensorsFound = 0
+local rpmScanTime = 0
+
+local function findRPMSensors()
+  rpmSourceIds = {}
+  rpmSensorsFound = 0
+  for i = 0, 63 do
+    local sensor = model.getSensor(i)
+    if sensor == nil then
+      break
+    end
+    local instance = sensor.instance
+    if sensor.id ~= nil and bit32.band(sensor.id, 0xFF) == 0x0C and instance ~= nil and instance < 4 then
+      local field = getFieldInfo("telem"..(i+1))
+      if field ~= nil and rpmSourceIds[instance+1] == nil then
+        rpmSourceIds[instance+1] = field.id
+        rpmSensorsFound = rpmSensorsFound + 1
+      end
+    end
+  end
+end
 
 local function task5HzA(widget, now)
   -- handle page emulation
@@ -2266,6 +2301,25 @@ local function task2HzA(widget, now)
     telemetry.yaw = math.deg(getValue("Yaw"))       -- rad to deg
     -- VFR
     telemetry.homeAlt = getValue("Alt")             -- m
+  end
+  -- motor RPM, the sensors are discovered while the widget runs so the scan is
+  -- repeated every 3s until all four are known
+  if rpmSensorsFound < 4 and now - rpmScanTime > 300 then
+    rpmScanTime = now
+    findRPMSensors()
+  end
+  -- an undiscovered sensor reads nil or 0, so a sensor counts as present from
+  -- its first non zero reading on and until then the passthrough values of
+  -- rpm1 and rpm2 are left alone
+  for i = 1, 4 do
+    local rpm = rpmSourceIds[i] ~= nil and getValue(rpmSourceIds[i]) or 0
+    rpm = type(rpm) == "number" and rpm or 0
+    if rpm ~= 0 and i > status.rpmSensorCount then
+      status.rpmSensorCount = i
+    end
+    if i <= status.rpmSensorCount then
+      telemetry["rpm"..i] = rpm
+    end
   end
   checkEvents()
   checkLandingStatus()
