@@ -742,6 +742,14 @@ end
 local function crsfFlightModeName()
   local fm = getValue("FM")
   if type(fm) == "string" and #fm > 0 then
+    -- the flight controller appends '*' to the mode name while disarmed; the
+    -- radio always holds the newest of these frames, so the arm state is
+    -- taken from here rather than from the queued passthrough status word
+    if string.sub(fm, -1) == "*" then
+      telemetry.statusArmed = 0
+      return string.sub(fm, 1, -2)
+    end
+    telemetry.statusArmed = 1
     return fm
   end
   return nil
@@ -1135,7 +1143,9 @@ local function processTelemetry(appId,value,now)
     telemetry.flightMode = bit32.extract(value,0,5)
     telemetry.simpleMode = bit32.extract(value,5,2)
     telemetry.landComplete = bit32.extract(value,7,1)
-    telemetry.statusArmed = bit32.extract(value,8,1)
+    if crsfFlightModeName() == nil then
+      telemetry.statusArmed = bit32.extract(value,8,1)
+    end
     telemetry.battFailsafe = bit32.extract(value,9,1)
     telemetry.ekfFailsafe = bit32.extract(value,10,2)
     telemetry.failsafe = bit32.extract(value,12,1)

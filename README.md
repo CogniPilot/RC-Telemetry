@@ -26,15 +26,32 @@ module. The FrSky S.Port path of the original project has been removed.
 3. Eject the drive and unplug the USB cable.
 4. On the radio, open the model, go to *Model setup* and set the external module
    to CRSF. In the ExpressLRS Lua script set the packet rate to 500 Hz and the
-   telemetry ratio to 1:8, the settings the firmware paces its output for.
+   telemetry ratio to 1:4, the settings the firmware paces its output for.
 5. Power up the flight controller, open the model's *Telemetry* page and run
-   *Discover new sensors*. Confirm that an `FM` sensor shows up, that is the
-   flight mode name the widget displays.
+   *Discover new sensors* (see below). Confirm that `FM`, `GPS`, `Sats`,
+   `RxBt` and `RFMD` show up.
 6. Go to *Screens*, add a screen of type *Widgets*, choose the full screen
    layout and set the widget to `yaapu`.
 7. Open *Tools* from the radio menu and run *Yaapu Config* once, so a
    configuration file is written for this model. Long pressing *Menu* on the
    widget screen reopens it later.
+
+## Discover the CRSF telemetry sensors
+
+EdgeTX turns the CRSF frames from the receiver into telemetry sensors, and the
+widget reads several of them directly rather than decoding every frame itself:
+`FM` for the flight mode name and the armed state, `GPS` for the position that
+centres the map, `Sats`, `RxBt` and `Curr` for the native battery and GPS
+values, and `RFMD` for the link mode. EdgeTX only creates a sensor when it has
+been discovered, so with an undiscovered sensor the mode line stays blank, the
+map page stays black and the arm state never changes, even though the frames
+arrive.
+
+Run *Discover new sensors* on the model's *Telemetry* page with the flight
+controller powered, the receiver bound and, for `GPS`, a fix or at least a few
+seconds of GPS frames. Stop the discovery once the list is stable. Repeat it
+after a firmware update that adds frames, after re-binding a new receiver, and
+on every model that uses the widget, because sensors are stored per model.
 
 ## Install on a radio (Boxer, GX12)
 
@@ -46,29 +63,38 @@ above, then open the model's *Telemetry* page, scroll to *Screen 1*, set it to
 ## ELRS link settings and telemetry budget
 
 The firmware paces its telemetry for ELRS 2.4 GHz at a **500 Hz packet rate
-with a 1:8 telemetry ratio**. Set both in the ELRS Lua script on the radio
-(`Tools`, then `ExpressLRS`). At that setting the receiver sends 62 telemetry
-packets per second, which ELRS rates at 2343 bit/s, about 293 bytes/s of CRSF
+with a 1:4 telemetry ratio**. Set both in the ELRS Lua script on the radio
+(`Tools`, then `ExpressLRS`). At that setting the receiver sends 125 telemetry
+packets per second, which ELRS rates at 4687 bit/s, about 585 bytes/s of CRSF
 frames, and the same channel carries the receiver's link statistics.
 
-The default firmware periods use roughly 230 bytes/s of that:
+The receiver queues telemetry in a 512 byte FIFO. GPS, battery and flight
+mode frames overwrite the older queued frame of their type, but the Yaapu
+passthrough frames are appended, so the firmware keeps them well below the
+link's drain rate; otherwise the status word waits seconds behind queued
+attitude frames. Measured with the mirror tool (`tools/crsf_mirror.py`): a 1:8
+link delivers about 8 passthrough frames per second in total and drops the
+rest, a 1:4 link keeps up with the defaults below, roughly 240 bytes/s:
 
 | Frame                              | Rate    | Bytes/s |
 | ---------------------------------- | ------- | ------- |
 | Attitude and heading (passthrough) | 10 Hz   | 180     |
 | GPS position                       | 1 Hz    | 19      |
-| Status, GPS status, home           | 0.5 Hz  | 12      |
+| Status, GPS status, home           | 1 Hz    | 24      |
 | Flight mode name (`FM`)            | 0.5 Hz plus every mode change | 7 |
 | Battery (CRSF and passthrough)     | 0.33 Hz | 8       |
 | Frame type parameter               | 0.25 Hz | 3       |
 
-Status texts (ready, armed, disarmed, failsafe) and every flight mode change
-are sent the moment they happen, ahead of the scheduled frames. The two
-fastest periods are Kconfig options (`CONFIG_RDD2_CRSF_TELEMETRY_ATTITUDE_PERIOD_MS`
-and `CONFIG_RDD2_CRSF_TELEMETRY_STATUS_PERIOD_MS`). A 1:16 ratio halves the
-budget and needs the attitude period raised to 500 ms; a poorer ratio (1:32
-and below) makes the screen lag, because the receiver drops frames it cannot
-fit rather than queueing them.
+Status texts (ready, armed, disarmed, failsafe), every flight mode change and
+every armed or failsafe change are sent the moment they happen, ahead of the
+scheduled frames. The armed state itself rides the flight mode frame (a
+trailing `*` on the mode name means disarmed), which the receiver never queues,
+so the widget's ARMED/DISARMED follows the switch even when the passthrough
+queue is busy. The two fastest periods are Kconfig options
+(`CONFIG_RDD2_CRSF_TELEMETRY_ATTITUDE_PERIOD_MS` and
+`CONFIG_RDD2_CRSF_TELEMETRY_STATUS_PERIOD_MS`): on a 1:8 link set the attitude
+period to 170 ms, on 1:16 to 500 ms; the receiver drops passthrough frames it
+cannot fit rather than delaying them forever.
 
 ## Map page
 
@@ -79,7 +105,7 @@ toggle in Yaapu Config. The widget defaults to map provider `Google`, map type
 `GoogleSatelliteMap`, zoom 16 (12 to 17), which matches the shipped tiles; a
 change in Yaapu Config is only written when the edited value is confirmed with
 ENTER. The map centres on the aircraft's GPS position from the `GPS` telemetry
-sensor, so discover sensors once with the flight controller on, and it draws
+sensor, so the sensors must have been discovered (see above), and it draws
 once there is a fix.
 
 The shipped tiles cover an 8 km radius around Lafayette, Indiana. Tiles for
