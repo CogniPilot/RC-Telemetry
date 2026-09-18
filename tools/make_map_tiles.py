@@ -8,10 +8,11 @@ widget's Google layout:
     <out>/GoogleSatelliteMap/<zoom>/<tile_y>/s_<tile_x>.jpg
 
 On the radio select map provider "Google" and map type "GoogleSatelliteMap"
-in Yaapu Config. Zoom levels 12 to 18 are the range the config menu offers.
+in Yaapu Config. The default zoom range 12 to 18 matches the widget defaults
+(zoom 16, min 12, max 18).
 
 Usage:
-    make_map_tiles.py LAT LON RADIUS_KM [--out DIR] [--zooms 12-17]
+    make_map_tiles.py LAT LON RADIUS_KM [--out DIR] [--zooms 12-18]
 
 Requires python3 with Pillow.
 """
@@ -73,7 +74,7 @@ def main():
     parser.add_argument("--out", type=pathlib.Path,
                         default=pathlib.Path(__file__).resolve().parents[1]
                         / "OTX_ETX/color_common/SD/IMAGES/yaapu/maps")
-    parser.add_argument("--zooms", default="12-17", help="inclusive range, e.g. 12-17")
+    parser.add_argument("--zooms", default="12-18", help="inclusive range, default 12-18")
     parser.add_argument("--workers", type=int, default=8)
     args = parser.parse_args()
 

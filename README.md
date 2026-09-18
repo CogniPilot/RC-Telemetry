@@ -110,13 +110,17 @@ sensor, so the sensors must have been discovered (see above), and it draws
 once there is a fix.
 
 The shipped tiles cover an 8 km radius around Lafayette, Indiana at zoom 12
-to 17, and a 3 km radius at zoom 18. Tiles for another area are one command
-each, then copy `OTX_ETX/color_common/SD/IMAGES` to the card again:
+to 17, and a 3 km radius at zoom 18. Tiles for another area are one command,
+then copy `OTX_ETX/color_common/SD/IMAGES` to the card again:
 
 ```
-tools/make_map_tiles.py LAT LON 8
-tools/make_map_tiles.py LAT LON 3 --zooms 18-18
+tools/make_map_tiles.py LAT LON RADIUS_KM
 ```
+
+The script's default zoom range is the widget's, 12 to 18. Zoom 18 is the
+expensive level (about 20000 tiles and 110 MB for an 8 km radius), so for a
+large radius run it once for the whole area and once more with a small radius
+and `--zooms 18-18`.
 
 ## Firmware side
 
