@@ -1083,18 +1083,10 @@ local function calcBattery()
     battery[13] = getBatt2Capacity()
   end
 
+  -- the flight controller reports one remaining percentage for the whole pack
   for battId=0,2
   do
-    if (battery[13+battId] > 0) then
-      battery[16+battId] = (1 - (battery[10+battId]/battery[13+battId]))*100
-      if battery[16+battId] > 99 then
-        battery[16+battId] = 99
-      elseif battery[16+battId] < 0 then
-        battery[16+battId] = 0
-      end
-    else
-      battery[16+battId] = 99
-    end
+    battery[16+battId] = batLevel
   end
 
   if status.showDualBattery == true and conf.battConf ==  1 then
@@ -1314,12 +1306,6 @@ local function checkEvents()
   checkAlarm(1,2*telemetry.failsafe,9,1,"failsafe",conf.repeatAlertsPeriod)
   checkAlarm(1,2*telemetry.fenceBreached,10,1,"fencebreach",conf.repeatAlertsPeriod)
   checkAlarm(1,2*telemetry.terrainUnhealthy,11,1,"terrainko",conf.repeatAlertsPeriod)
-  if battery[13] > 0 then
-    batLevel = (1 - battery[10]/battery[13])*100
-  else
-    batLevel = 99
-  end
-
   for l=0,12 do
     -- trigger alarm as as soon as it falls below level + 1 (i.e 91%,81%,71%,...)
     local level = tonumber(string.sub("00051015202530405060708090",l*2+1,l*2+2))
@@ -1447,6 +1433,9 @@ local function background()
 
   -- SLOWER: this runs at 2Hz (every 500ms)
   if (bgclock % 8 == 0) then
+    -- remaining battery percentage as the flight controller sends it in the CRSF
+    -- battery frame, 99 as a placeholder until the radio has discovered "Bat%"
+    batLevel = getFieldInfo("Bat%") ~= nil and getValue("Bat%") or 99
     calcBattery()
     calcFlightTime()
     checkEvents()

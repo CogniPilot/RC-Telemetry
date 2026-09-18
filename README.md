@@ -38,16 +38,20 @@ module. The FrSky S.Port path of the original project has been removed.
    1:8 or slower the widget lags and drops frames.
 4. **Discover the sensors.** Power the flight controller, wait for the link,
    open the model's *Telemetry* page and run *Discover new sensors* until the
-   list is stable (see the next section). `FM`, `GPS`, `Sats`, `RxBt`, `RFMD`
-   and four `RPM` entries must be there.
+   list is stable (see the next section). `FM`, `GPS`, `Sats`, `RxBt`, `Bat%`,
+   `RFMD` and four `RPM` entries must be there.
 5. **Add the widget.** *Screens*, add a screen of type *Widgets*, full
    screen layout, widget `yaapu`. For the map, add a second screen with
    another `yaapu` widget and set its *Screen Type* to 5.
 6. **Run Yaapu Config once.** *Tools*, *Yaapu Config*: set *enable RPM
-   support* to `rpm1+rpm2` for the motor bars, *enable battery % by voltage*
-   if wanted, and press *Enter* on an edited value so the configuration file
-   is written for this model. A long press on *Menu* over the widget reopens
-   it later.
+   support* to `rpm1+rpm2` for the motor bars, and press *Enter* on an edited
+   value so the configuration file is written for this model. A long press on
+   *Menu* over the widget reopens it later.
+
+The battery percentage is the one the flight controller reports in the CRSF
+battery frame, which EdgeTX turns into the `Bat%` sensor. The widget shows it
+as it arrives and estimates nothing; until `Bat%` has been discovered it shows
+99 as a placeholder.
 
 Check: the horizon follows the board when it is tilted, the mode line reads
 the flight mode with `DISARMED` until the vehicle arms, the satellite count
@@ -59,7 +63,7 @@ motors.
 EdgeTX turns the CRSF frames from the receiver into telemetry sensors, and the
 widget reads several of them directly rather than decoding every frame itself:
 `FM` for the flight mode name and the armed state, `GPS` for the position that
-centres the map, `Sats`, `RxBt` and `Curr` for the native battery and GPS
+centres the map, `Sats`, `RxBt`, `Curr` and `Bat%` for the native battery and GPS
 values, and `RFMD` for the link mode. EdgeTX only creates a sensor when it has
 been discovered, so with an undiscovered sensor the mode line stays blank, the
 map page stays black and the arm state never changes, even though the frames

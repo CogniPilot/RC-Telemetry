@@ -43,7 +43,6 @@ local conf = {
   battConf = 1, -- 1=parallel,2=other
   cell1Count = 0,
   cell2Count = 0,
-  enableBattPercByVoltage = false,
   rangeFinderMax=0,
   enableSynthVSpeed=false,
   horSpeedMultiplier=1,
@@ -475,9 +474,6 @@ local blinkon = false
 -- model and opentx version
 local ver, radio, maj, minor, rev = getVersion()
 local opentx = tonumber(maj..minor..rev)
--- battery % by voltage
-local battPercByVoltage = {}
-
 
 -- for better performance we cache lcd.RGB()
 utils.initColors = function()
@@ -603,41 +599,6 @@ local function calcCellCount()
   end
 
   return c1,c2
-end
-
-utils.getBattPercByCell = function(voltage)
-  if battPercByVoltage.dischargeCurve == nil then
-    return 99
-  end
-  -- when disarmed apply voltage drop to use an "under load" curve
-  if telemetry.statusArmed == 0 then
-    voltage = voltage - battPercByVoltage.voltageDrop
-  end
-
-  if battPercByVoltage.useCellVoltage == false then
-    voltage = voltage*calcCellCount()
-  end
-  if voltage == 0 then
-    return 99
-  end
-  if voltage >= battPercByVoltage.dischargeCurve[#battPercByVoltage.dischargeCurve][1] then
-    return 99
-  end
-  if voltage <= battPercByVoltage.dischargeCurve[1][1] then
-    return 0
-  end
-  for i=2,#battPercByVoltage.dischargeCurve do
-    if voltage <= battPercByVoltage.dischargeCurve[i][1] then
-      --
-      local v0 = battPercByVoltage.dischargeCurve[i-1][1]
-      local fv0 = battPercByVoltage.dischargeCurve[i-1][2]
-      --
-      local v1 = battPercByVoltage.dischargeCurve[i][1]
-      local fv1 = battPercByVoltage.dischargeCurve[i][2]
-      -- interpolation polinomial
-      return fv0 + ((fv1 - fv0)/(v1-v0))*(voltage - v0)
-    end
-  end --for
 end
 
 local loadCycle = 0
@@ -1049,11 +1010,6 @@ local function getSensorsConfigFilename(panel)
   return cfg
 end
 
-local function getBattConfigFilename()
-  local info = model.getInfo()
-  return "/WIDGETS/YAAPU/CFG/" .. string.lower(string.gsub(info.name, "[%c%p%s%z]", "").."_batt.lua")
-end
-
 --------------------------
 -- CUSTOM SENSORS SUPPORT
 --------------------------
@@ -1081,23 +1037,6 @@ utils.loadCustomSensors = function(panel)
     return sensors
   else
     return nil
-  end
-end
-
--------------------------------------------
--- Battery Percentage By Voltage
--------------------------------------------
-utils.loadBatteryConfigFile = function()
-  local success, battConfig = pcall(loadScript,getBattConfigFilename())
-  if success then
-    if battConfig == nil then
-      battPercByVoltage = {}
-      return
-    end
-    battPercByVoltage = battConfig()
-    --utils.pushMessage(6,"battery curve loaded")
-  else
-    battPercByVoltage = {}
   end
 end
 
@@ -1481,29 +1420,10 @@ local function calcBattery()
     status.battery[13] = getBatt1Capacity()
   end
 
-  --[[
-    discharge curve is based on battery under load, when motors are disarmed
-    cellvoltage needs to be corrected by subtracting the "under load" voltage drop
-  --]]
-  if conf.enableBattPercByVoltage == true then
-    for battId=0,2
-    do
-      status.battery[16+battId] = utils.getBattPercByCell(0.01*status.battery[1+battId])
-    end
-  else
-    for battId=0,2
-    do
-      if (status.battery[13+battId] > 0) then
-        status.battery[16+battId] = (1 - (status.battery[10+battId]/status.battery[13+battId]))*100
-        if status.battery[16+battId] > 99 then
-          status.battery[16+battId] = 99
-        elseif status.battery[16+battId] < 0 then
-          status.battery[16+battId] = 0
-        end
-      else
-        status.battery[16+battId] = 99
-      end
-    end
+  -- the flight controller reports one remaining percentage for the whole pack
+  for battId=0,2
+  do
+    status.battery[16+battId] = status.batLevel
   end
 
   if status.showDualBattery == true and conf.battConf ==  1 then
@@ -1518,9 +1438,6 @@ local function calcBattery()
       --
       status.battery[13+1] = status.battery[13+1]/2   --cap1
       status.battery[13+2] = status.battery[13+1]     --cap2
-      --
-      status.battery[16+1] = status.battery[16+1]/2   --perc1
-      status.battery[16+2] = status.battery[16+1]     --perc2
     end
   end
 
@@ -2054,16 +1971,6 @@ local function checkEvents()
     utils.checkAlarm(conf.timerAlert,status.flightTime,6,1,"timealert",conf.timerAlert)
   end
 
-  if conf.enableBattPercByVoltage == true then
-    status.batLevel = utils.getBattPercByCell(status.battery[1]*0.01)
-  else
-    if (status.battery[13] > 0) then
-      status.batLevel = (1 - (status.battery[10]/status.battery[13]))*100
-    else
-      status.batLevel = 99
-    end
-  end
-
   for l=1,13 do
     -- trigger alarm as as soon as it falls below level + 1 (i.e 91%,81%,71%,...)
     if status.batLevel <= status.batLevels[l] + 1 and l < status.lastBattLevel then
@@ -2286,6 +2193,10 @@ local function task2HzA(widget, now)
   end
   telemetry.rssiCRSF = math.min(100, math.floor(0.5 + ((1-(rssi_dbm - 50)/70)*100)))
 
+  -- remaining battery percentage as the flight controller sends it in the CRSF
+  -- battery frame, 99 as a placeholder until the radio has discovered "Bat%"
+  status.batLevel = getFieldInfo("Bat%") ~= nil and getValue("Bat%") or 99
+
   if getValue("RFMD") == 1 then
     -- GPS
     telemetry.numSats = getValue("Sats")
@@ -2495,8 +2406,6 @@ local function init()
   status.currentModel = model.getInfo().name
   -- load custom sensors
   customSensors = utils.loadCustomSensors()
-  -- load battery config
-  utils.loadBatteryConfigFile()
   -- ok done
   utils.pushMessage(7,"Yaapu Telemetry Widget 2.1.x dev".." ("..'7a17b47'..")")
 

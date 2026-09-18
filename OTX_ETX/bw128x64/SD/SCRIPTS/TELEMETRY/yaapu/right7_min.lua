@@ -33,10 +33,7 @@ end
 
 
 local function drawPane(x,drawLib,conf,telemetry,status,battery,battId,getMaxValue,gpsStatuses)
-  local perc = 0
-  if (battery[13+battId] > 0) then
-    perc = math.min(math.max((1 - (battery[10+battId]/battery[13+battId]))*100,0),99)
-  end
+  local perc = battery[16+battId]
   --  battery min cell
   local flags = 0
   local dimFlags = 0

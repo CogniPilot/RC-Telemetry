@@ -70,7 +70,6 @@ local menuItems = {
   {"batt[1] cell count override:", "CC", 0, 0,16," cells",0,1 },
   {"batt[2] cell count override:", "CC2", 0, 0,16," cells",0,1 },
   {"dual battery config:", "BC", 1, { "parallel", "series", "dual with alert on B1", "dual with alert on B2", "volts on B1, % on B2", "volts on B2, % on B1" }, { 1, 2, 3, 4, 5, 6 } },
-  {"enable battery % by voltage:", "BPBV", 1, { "no", "yes" }, { false, true } },
   {"default voltage source:", "VS", 1, { "auto", "FLVSS", "fc" }, { nil, "vs", "fc" } },
   {"disable all sounds:", "S1", 1, { "no", "yes" }, { false, true } },
   {"disable incoming msg beep:", "S2", 1, { "no", "only for INF severity", "always" }, { 1, 2, 3 } },
@@ -424,7 +423,6 @@ local function applyConfigValues(conf)
     conf.defaultBattSource = getMenuItemByName(menuItems,"VS")
   end
   conf.gpsFormat = getMenuItemByName(menuItems,"GPS")
-  conf.enableBattPercByVoltage = getMenuItemByName(menuItems,"BPBV")
 
   conf.plotSource1 = getMenuItemByName(menuItems,"PLT1")
   conf.plotSource2 = getMenuItemByName(menuItems,"PLT2")

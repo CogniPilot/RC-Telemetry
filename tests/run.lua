@@ -201,6 +201,23 @@ local function checkSensors(label, list)
   end
 end
 
+-- The battery percentage comes from the CRSF battery frame, which EdgeTX
+-- serves as the "Bat%" sensor: the scripts show it as it arrives and fall back
+-- to 99 for as long as the sensor has not been discovered.
+local function checkBattPercent(label, cycle)
+  local b = stub.battery
+  if not check(label .. ": battery array captured", b ~= nil) then return end
+  check(label .. ": 99 while \"Bat%\" is undiscovered", b[16+1] == 99, b[16+1])
+  stub.battPercent = 54
+  cycle()
+  check(label .. ": reported percentage reaches battery[16+1]", b[16+1] == 54, b[16+1])
+  check(label .. ": and battery[16+2] and the pack value", b[16+2] == 54 and b[16] == 54,
+    tostring(b[16]) .. "/" .. tostring(b[16+2]))
+  stub.battPercent = nil
+  cycle()
+  check(label .. ": back to 99 once the sensor is gone", b[16+1] == 99, b[16+1])
+end
+
 -------------------------------------------------------------------------------
 -- the TX15 widget
 -------------------------------------------------------------------------------
@@ -246,6 +263,9 @@ local function runWidget()
   end)
 
   checkDecoded(label)
+  checkBattPercent(label, function()
+    for _ = 1, 12 do feed() stub.tick() w.refresh(widget) w.background(widget) end
+  end)
   checkSensors(label, { { "VSpd", function(t) return t.vSpeed end } })
   check(label .. ": draws flight mode " .. tostring(fmName), stub.drewText(fmName))
   -- the four motor RPM sensors, all labelled "RPM" and told apart by instance
@@ -314,6 +334,9 @@ local function runScript()
   end)
 
   checkDecoded(label)
+  checkBattPercent(label, function()
+    for _ = 1, 24 do feed() stub.tick() s.background() s.run(0) end
+  end)
   checkSensors(label, {
     { "ARM",  function(t) return t.statusArmed * 100 end },
     { "IMUt", function(t) return t.imuTemp end },

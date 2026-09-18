@@ -6,9 +6,11 @@
 -- stub.pushFrame(type, bytes)                           queue a CRSF frame
 -- stub.setFlightModeName(s)                             what getValue("FM") returns
 -- stub.rpm                                              the four motor RPM values
+-- stub.battPercent                                      what "Bat%" reads, nil undiscovered
 -- stub.calls                                            recorded API calls
 -- stub.sensors                                          last setTelemetryValue per name
 -- stub.telemetry                                        the script's telemetry table
+-- stub.battery                                          the script's battery array
 -- stub.loaded                                           loadScript paths that resolved
 --
 local stub = {}
@@ -147,6 +149,12 @@ local function isTelemetry(t)
      and t.roll ~= nil and t.gpsHdopC ~= nil
 end
 
+-- The widget hands its status table to every library and the 128x64 script
+-- hands the battery array to every panel, both reach the same 18 value array.
+local function isBattery(t)
+  return type(t) == "table" and #t == 18 and type(t[16]) == "number"
+end
+
 local function instrument(chunk)
   return function(...)
     local ret = chunk(...)
@@ -155,7 +163,10 @@ local function instrument(chunk)
         if type(v) == "function" then
           ret[k] = function(...)
             for i = 1, select("#", ...) do
-              if isTelemetry((select(i, ...))) then stub.telemetry = (select(i, ...)) end
+              local a = (select(i, ...))
+              if isTelemetry(a) then stub.telemetry = a end
+              if isBattery(a) then stub.battery = a
+              elseif type(a) == "table" and isBattery(a.battery) then stub.battery = a.battery end
             end
             return v(...)
           end
@@ -238,6 +249,8 @@ end
 local TELEM_FIRST = 300
 
 function getFieldInfo(name)
+  -- a sensor the radio has not discovered has no field at all
+  if name == "Bat%" and stub.battPercent == nil then return nil end
   local n = string.match(tostring(name), "^telem(%d+)$")
   local id = n ~= nil and TELEM_FIRST + 3 * (tonumber(n) - 1) or 1
   return { id = id, name = name, desc = name, unit = 0, prec = 0 }
@@ -245,6 +258,8 @@ end
 
 function getValue(id)
   if id == "FM" then return stub.fm end
+  -- the CRSF battery frame percentage, 0 while the sensor is undiscovered
+  if id == "Bat%" then return stub.battPercent or 0 end
   -- all four CRSF RPM sensors are labelled "RPM", so a lookup by name reaches
   -- the first one only and "RPM2".."RPM4" do not exist
   if id == "RPM" then return stub.rpm[1] end
@@ -319,6 +334,9 @@ function stub.reset(opts)
   stub.queue, stub.queueIdx = {}, 1
   stub.calls, stub.sensors, stub.timers, stub.loaded = {}, {}, {}, {}
   stub.telemetry = nil
+  stub.battery = nil
+  -- the radio has not discovered "Bat%" until a test serves a value for it
+  stub.battPercent = opts.battPercent
   LCD_W, LCD_H = opts.lcdw, opts.lcdh
 end
 
