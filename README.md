@@ -98,7 +98,7 @@ passthrough frames are appended, so the firmware keeps them well below the
 link's drain rate; otherwise the status word waits seconds behind queued
 attitude frames. Measured with the mirror tool (`tools/crsf_mirror.py`): a 1:8
 link delivers about 8 passthrough frames per second in total and drops the
-rest, a 1:4 link keeps up with the defaults below, roughly 310 bytes/s:
+rest, a 1:4 link keeps up with the defaults below, roughly 325 bytes/s:
 
 | Frame                              | Rate    | Bytes/s |
 | ---------------------------------- | ------- | ------- |
@@ -106,7 +106,7 @@ rest, a 1:4 link keeps up with the defaults below, roughly 310 bytes/s:
 | GPS position                       | 1 Hz    | 19      |
 | Status, GPS status, home           | 1 Hz    | 24      |
 | Flight mode name (`FM`)            | 0.5 Hz plus every mode change | 7 |
-| Battery (CRSF and passthrough)     | 0.33 Hz | 8       |
+| Battery (CRSF and passthrough)     | 1 Hz    | 24      |
 | Frame type parameter               | 0.25 Hz | 3       |
 | Motor RPM (CRSF RPM frame, 4 motors) | 4 Hz  | 68      |
 
@@ -134,18 +134,17 @@ ENTER. The map centres on the aircraft's GPS position from the `GPS` telemetry
 sensor, so the sensors must have been discovered (see above), and it draws
 once there is a fix.
 
-The shipped tiles cover an 8 km radius around Lafayette, Indiana at zoom 12
-to 17, and a 3 km radius at zoom 18. Tiles for another area are one command,
-then copy `OTX_ETX/color_common/SD/IMAGES` to the card again:
+The shipped tiles cover an 8 km radius around Lafayette, Indiana at every
+zoom level from 12 to 18. Tiles for another area are one command, then copy
+`OTX_ETX/color_common/SD/IMAGES` to the card again:
 
 ```
 tools/make_map_tiles.py LAT LON RADIUS_KM
 ```
 
 The script's default zoom range is the widget's, 12 to 18. Zoom 18 is the
-expensive level (about 20000 tiles and 110 MB for an 8 km radius), so for a
-large radius run it once for the whole area and once more with a small radius
-and `--zooms 18-18`.
+expensive level (about 20000 tiles and 110 MB for an 8 km radius); pass
+`--zooms 12-17` to skip it for a large area.
 
 ## Firmware side
 
