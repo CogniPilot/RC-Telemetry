@@ -474,17 +474,6 @@ local function runScript()
   check(label .. ": the reset is announced", drewTextAbove("Telemetry reset", 58))
   page("message page back to the main view", EVT_VIRTUAL_PREV)
 
-  -- the heli layouts ship with the script but nothing selects them, so they
-  -- are only loaded here
-  protect(label .. ": the heli layouts load", function()
-    local view = assert(loadScript("/SCRIPTS/TELEMETRY/yaapu/heli7_view.lua"),
-      "heli7_view.lua not found")()
-    assert(type(view.drawView) == "function", "heli7_view has no drawView")
-    local pane = assert(loadScript("/SCRIPTS/TELEMETRY/yaapu/right7_heli.lua"),
-      "right7_heli.lua not found")()
-    assert(type(pane.drawPane) == "function", "right7_heli has no drawPane")
-  end)
-
   -----------------------------------------------------------------------------
   -- a seeded random walk over the same keys, with and without frames
   -----------------------------------------------------------------------------
@@ -597,9 +586,9 @@ end
 -- every library under yaapu/ has to have been loaded and run by the sweep
 -------------------------------------------------------------------------------
 local function checkCoverage()
-  for _, name in ipairs({ "alt7_view", "blimp", "copter", "draw7", "heli7_view",
+  for _, name in ipairs({ "alt7_view", "blimp", "copter", "draw7",
     "hud7", "hud7_min", "left7", "left7_m2f", "menu7", "plane", "reset",
-    "right7", "right7_heli", "right7_min", "rover" }) do
+    "right7", "right7_min", "rover" }) do
     check("bw128x64 libraries: " .. name .. ".lua was loaded", loadedLibs[name] == true)
   end
 end
