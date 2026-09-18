@@ -97,18 +97,7 @@ function panel.draw(widget, x, y, battId)
   lcd.drawText(x+110, y+112, strmah, 0+RIGHT+CUSTOM_COLOR)
 
   lcd.setColor(CUSTOM_COLOR,lcd.RGB(140, 140, 140))
-  local battLabel = "B1B2"
-  if battId == 0 then
-    if conf.battConf ==  3 then
-      -- alarms are based on battery 1
-      battLabel = "B1"
-    elseif conf.battConf ==  4 then
-      -- alarms are based on battery 2
-      battLabel = "B2"
-    end
-  else
-    battLabel = (battId == 1 and "B1" or "B2")
-  end
+  local battLabel = battId == 0 and "B1B2" or (battId == 1 and "B1" or "B2")
 
   lcd.drawText(x+1, y+-2, battLabel, SMLSIZE+CUSTOM_COLOR)
 

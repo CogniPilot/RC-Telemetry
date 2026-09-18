@@ -44,8 +44,6 @@ local conf = {
   language = "en",
   battAlertLevel1 = 0,
   battAlertLevel2 = 0,
-  battCapOverride1 = 0,
-  battCapOverride2 = 0,
   disableAllSounds = false,
   disableMsgBeep = 1,
   timerAlert = 0,
@@ -53,9 +51,6 @@ local conf = {
   maxAltitudeAlert = 0,
   maxDistanceAlert = 0,
   repeatAlertsPeriod = 10,
-  battConf = 1, -- 1=parallel,2=other
-  cell1Count = 0,
-  cell2Count = 0,
   rangeFinderMax = 0,
   horSpeedMultiplier = 1,
   vertSpeedMultiplier = 1,
@@ -65,7 +60,6 @@ local conf = {
   rightPanel = nil,
   leftPanel = nil,
   altView = nil,
-  defaultBattSource = "na",
   enableHaptic = false
 }
 

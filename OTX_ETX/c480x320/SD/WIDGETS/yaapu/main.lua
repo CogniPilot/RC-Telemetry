@@ -27,11 +27,8 @@ local unitLongLabel = getGeneralSettings().imperial == 0 and "km" or "mi"
 -----------
 local conf = {
   language = "en",
-  defaultBattSource = "na", -- auto
   battAlertLevel1 = 0,
   battAlertLevel2 = 0,
-  battCapOverride1 = 0,
-  battCapOverride2 = 0,
   disableAllSounds = false,
   disableMsgBeep = 1,
   enableHaptic = false,
@@ -40,9 +37,6 @@ local conf = {
   minAltitudeAlert = 0,
   maxAltitudeAlert = 0,
   maxDistanceAlert = 0,
-  battConf = 1, -- 1=parallel,2=other
-  cell1Count = 0,
-  cell2Count = 0,
   rangeFinderMax=0,
   enableSynthVSpeed=false,
   horSpeedMultiplier=1,
@@ -577,22 +571,19 @@ utils.failsafeActive = function(telemetry)
   return true
 end
 
+-- cell count from the cell voltage sensor when there is one, from the pack
+-- voltage otherwise
 local function calcCellCount()
-  -- cellcount override from menu
   local c1 = 0
   local c2 = 0
 
-  if conf.cell1Count ~= nil and conf.cell1Count > 0 then
-    c1 = conf.cell1Count
-  elseif status.batt1sources.vs == true and status.cell1count > 1 then
+  if status.batt1sources.vs == true and status.cell1count > 1 then
     c1 = status.cell1count
   else
     c1 = math.floor( ((status.cell1maxFC*0.1) / 4.35) + 1)
   end
 
-  if conf.cell2Count ~= nil and conf.cell2Count > 0 then
-    c2 = conf.cell2Count
-  elseif status.batt2sources.vs == true and status.cell2count > 1 then
+  if status.batt2sources.vs == true and status.cell2count > 1 then
     c2 = status.cell2count
   else
     c2 = math.floor(((status.cell2maxFC*0.1)/4.35) + 1)
@@ -1106,22 +1097,10 @@ local function processTelemetry(appId,value,now)
     telemetry.gpsAlt = bit32.extract(value,24,7) * (10^bit32.extract(value,22,2)) * (bit32.extract(value,31,1) == 1 and -1 or 1)-- dm
   elseif appId == 0x5003 then -- BATT
     telemetry.batt1volt = bit32.extract(value,0,9)
-    -- telemetry max is 51.1V, 51.2 is reported as 0.0, 52.3 is 0.1...60 is 88
-    -- if >= 12S and V > 51.1 ==> Vreal = 51.2 + telemetry.batt1volt
-    if conf.cell1Count >= 12 and telemetry.batt1volt < conf.cell1Count*20 then
-      -- assume a 2V as minimum acceptable "real" voltage
-      telemetry.batt1volt = 512 + telemetry.batt1volt
-    end
     telemetry.batt1current = bit32.extract(value,10,7) * (10^bit32.extract(value,9,1))
     telemetry.batt1mah = bit32.extract(value,17,15)
   elseif appId == 0x5008 then -- BATT2
     telemetry.batt2volt = bit32.extract(value,0,9)
-    -- telemetry max is 51.1V, 51.2 is reported as 0.0, 52.3 is 0.1...60 is 88
-    -- if >= 12S and V > 51.1 ==> Vreal = 51.2 + telemetry.batt1volt
-    if conf.cell2Count >= 12 and telemetry.batt2volt < conf.cell2Count*20 then
-      -- assume a 2V as minimum acceptable "real" voltage
-      telemetry.batt2volt = 512 + telemetry.batt2volt
-    end
     telemetry.batt2current = bit32.extract(value,10,7) * (10^bit32.extract(value,9,1))
     telemetry.batt2mah = bit32.extract(value,17,15)
   elseif appId == 0x5004 then -- HOME
@@ -1236,13 +1215,9 @@ local function getNonZeroMin(v1,v2)
   return v1 == 0 and v2 or ( v2 == 0 and v1 or math.min(v1,v2))
 end
 
-local function getBatt1Capacity()
-  return conf.battCapOverride1 > 0 and conf.battCapOverride1*10 or telemetry.batt1Capacity
-end
-
 local function getBatt2Capacity()
   -- this is a fix for passthrough telemetry reporting batt2 capacity > 0 even if BATT2_MONITOR = 0
-  return conf.battCapOverride2 > 0 and conf.battCapOverride2*10 or ( status.batt2sources.fc and telemetry.batt2Capacity or 0 )
+  return status.batt2sources.fc and telemetry.batt2Capacity or 0
 end
 
 -- gets the voltage based on source and min value, battId = [1|2]
@@ -1375,70 +1350,20 @@ local function calcBattery()
   status.battery[10+1] = telemetry.batt1mah --mah1
   status.battery[10+2] = telemetry.batt2mah --mah2
 
-  status.battery[13+1] = getBatt1Capacity() --cap1
+  status.battery[13+1] = telemetry.batt1Capacity --cap1
   status.battery[13+2] = getBatt2Capacity() --cap2
 
-  if (conf.battConf == 1) then
-    status.battery[1] = getNonZeroMin(status.battery[2], status.battery[3])
-    status.battery[4] = getNonZeroMin(status.battery[5],status.battery[6])
-    status.battery[7] = telemetry.batt1current + telemetry.batt2current
-    status.battery[10] = telemetry.batt1mah + telemetry.batt2mah
-    status.battery[13] = getBatt2Capacity() + getBatt1Capacity()
-  elseif (conf.battConf == 2) then
-    status.battery[1] = getNonZeroMin(status.battery[2], status.battery[3])
-    status.battery[4] = status.battery[5] + status.battery[6]
-    status.battery[7] = telemetry.batt1current
-    status.battery[10] = telemetry.batt1mah
-    status.battery[13] = getBatt1Capacity()
-  elseif (conf.battConf == 3) then
-    -- independent batteries, alerts and capacity % on battery 1
-    status.battery[1] = status.battery[2]
-    status.battery[4] = status.battery[5]
-    status.battery[7] = telemetry.batt1current
-    status.battery[10] = telemetry.batt1mah
-    status.battery[13] = getBatt1Capacity()
-  elseif (conf.battConf == 4) then
-    -- independent batteries, alerts and capacity % on battery 2
-    status.battery[1] = status.battery[3]
-    status.battery[4] = status.battery[6]
-    status.battery[7] = telemetry.batt2current
-    status.battery[10] = telemetry.batt2mah
-    status.battery[13] = getBatt2Capacity()
-  elseif (conf.battConf == 5) then
-    -- independent batteries, voltage alerts on battery 1, capacity % on battery 2
-    status.battery[1] = status.battery[2]
-    status.battery[4] = status.battery[5]
-    status.battery[7] = telemetry.batt2current
-    status.battery[10] = telemetry.batt2mah
-    status.battery[13] = getBatt2Capacity()
-  elseif (conf.battConf == 6) then
-    -- independent batteries, voltage alerts on battery 2, capacity % on battery 1
-    status.battery[1] = status.battery[3]
-    status.battery[4] = status.battery[6]
-    status.battery[7] = telemetry.batt1current
-    status.battery[10] = telemetry.batt1mah
-    status.battery[13] = getBatt1Capacity()
-  end
+  -- pack values, a battery 2 that was never discovered contributes zero
+  status.battery[1] = getNonZeroMin(status.battery[2], status.battery[3])
+  status.battery[4] = getNonZeroMin(status.battery[5],status.battery[6])
+  status.battery[7] = telemetry.batt1current + telemetry.batt2current
+  status.battery[10] = telemetry.batt1mah + telemetry.batt2mah
+  status.battery[13] = getBatt2Capacity() + telemetry.batt1Capacity
 
   -- the flight controller reports one remaining percentage for the whole pack
   for battId=0,2
   do
     status.battery[16+battId] = status.batLevel
-  end
-
-  if status.showDualBattery == true and conf.battConf ==  1 then
-    -- dual parallel battery: do I have also dual current monitor?
-    if status.battery[7+1] > 0 and status.battery[7+2] == 0  then
-      -- special case: assume 1 power brick is monitoring batt1+batt2 in parallel
-      status.battery[7+1] = status.battery[7+1]/2 --curr1
-      status.battery[7+2] = status.battery[7+1]   --curr2
-      --
-      status.battery[10+1]  = status.battery[10+1]/2  --mah1
-      status.battery[10+2]  = status.battery[10+1]    --mah2
-      --
-      status.battery[13+1] = status.battery[13+1]/2   --cap1
-      status.battery[13+2] = status.battery[13+1]     --cap2
-    end
   end
 
   -- aggregate value
@@ -2107,7 +2032,7 @@ local function loadConfig(init)
   -- get a reference to the plotSources table
   status.plotSources = menuLib.plotSources
   -- ok configuration loaded
-  status.battsource = conf.defaultBattSource
+  status.battsource = "na"
   telemetryPop = crossfirePop
   utils.drawRssi = drawRssiCRSF
   -- do not reset layout on boot
@@ -2397,7 +2322,7 @@ local function init()
   -- ok configuration loaded
   status.mapZoomLevel = conf.mapZoomLevel
 
-  status.battsource = conf.defaultBattSource
+  status.battsource = "na"
   -- load draw library
   libs.drawLib = utils.doLibrary("drawlib")
   libs.mapLib = utils.doLibrary("maplib")

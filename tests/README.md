@@ -14,5 +14,10 @@ type for the vehicle libraries, drives the Yaapu Config tool, and finishes with
 a seeded random walk over the same keys. A coverage list at the end fails if a
 library under `SCRIPTS/TELEMETRY/yaapu/` was never loaded.
 
+Both scripts are also checked on the battery percentage the flight controller
+reports as the `Bat%` sensor, on the 99 placeholder they show while that sensor
+is undiscovered, and on reading a model config file that still holds the
+battery keys the config menus no longer have.
+
 Needs Lua 5.3 with `bit32` (`LUA_COMPAT_5_2`); set `LUA` and `LUAC` if they are
 not `lua5.3`/`luac5.3`.

@@ -201,6 +201,20 @@ local function checkSensors(label, list)
   end
 end
 
+-- Append to a model config file, on the scratch overlay: the extra keys are
+-- the battery items the menus dropped, an old config still holding them has to
+-- be read as if they were not there.
+local staleKeys = ",B1:300,B2:200,CC:6,CC2:6,BC:3,VS:2,BPBV:2"
+
+local function ageConfig(path, extra)
+  local f = assert(io.open(path, "r"))
+  local text = io.read(f, 500)
+  io.close(f)
+  f = assert(io.open(path, "w"))
+  io.write(f, text .. extra .. staleKeys)
+  io.close(f)
+end
+
 -- The battery percentage comes from the CRSF battery frame, which EdgeTX
 -- serves as the "Bat%" sensor: the scripts show it as it arrives and fall back
 -- to 99 for as long as the sensor has not been discovered.
@@ -216,6 +230,9 @@ local function checkBattPercent(label, cycle)
   stub.battPercent = nil
   cycle()
   check(label .. ": back to 99 once the sensor is gone", b[16+1] == 99, b[16+1])
+  -- the capacity comes from the flight controller, the config file key that
+  -- used to override it is gone and the stale entry has to be ignored
+  check(label .. ": the removed capacity override is ignored", b[13+1] == 0, b[13+1])
 end
 
 -------------------------------------------------------------------------------
@@ -230,13 +247,7 @@ local function runWidget()
   }
 
   -- the per motor RPM bars are gated by "enable RPM support" (RPM:3)
-  local cfgPath = "/WIDGETS/Yaapu/cfg/modelname.cfg"
-  local cfg = assert(io.open(cfgPath, "r"))
-  local cfgText = io.read(cfg, 500)
-  io.close(cfg)
-  cfg = assert(io.open(cfgPath, "w"))
-  io.write(cfg, cfgText .. ",RPM:3")
-  io.close(cfg)
+  ageConfig("/WIDGETS/Yaapu/cfg/modelname.cfg", ",RPM:3")
 
   local w
   if not protect(label .. ": load", function()
@@ -313,6 +324,8 @@ local function runScript()
     s = assert(loadScript("/SCRIPTS/TELEMETRY/yaapu7.lua"), "yaapu7.lua not found")()
     assert(type(s.run) == "function" and type(s.init) == "function", "not a telemetry script")
   end) then return end
+
+  ageConfig("/MODELS/yaapu/yaapudev.cfg", "")
 
   feed()
   if not protect(label .. ": init", function() s.init() end) then return end

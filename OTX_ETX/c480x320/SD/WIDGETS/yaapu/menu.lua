@@ -65,12 +65,6 @@ local menuItems = {
   {"color theme:", "TH", 1, { "default", "ethos" } , { 1, 2} },
   {"batt alert level 1:", "V1", 375, 0,5000,"V",PREC2,5 },
   {"batt alert level 2:", "V2", 350, 0,5000,"V",PREC2,5 },
-  {"batt[1] capacity override:", "B1", 0, 0,5000,"Ah",PREC2,10 },
-  {"batt[2] capacity override:", "B2", 0, 0,5000,"Ah",PREC2,10 },
-  {"batt[1] cell count override:", "CC", 0, 0,16," cells",0,1 },
-  {"batt[2] cell count override:", "CC2", 0, 0,16," cells",0,1 },
-  {"dual battery config:", "BC", 1, { "parallel", "series", "dual with alert on B1", "dual with alert on B2", "volts on B1, % on B2", "volts on B2, % on B1" }, { 1, 2, 3, 4, 5, 6 } },
-  {"default voltage source:", "VS", 1, { "auto", "FLVSS", "fc" }, { nil, "vs", "fc" } },
   {"disable all sounds:", "S1", 1, { "no", "yes" }, { false, true } },
   {"disable incoming msg beep:", "S2", 1, { "no", "only for INF severity", "always" }, { 1, 2, 3 } },
   {"enable haptic:", "VIBR", 1, { "no", "yes" }, { false, true } },
@@ -366,8 +360,6 @@ local function applyConfigValues(conf)
   conf.language = getMenuItemByName(menuItems,"L1")
   conf.battAlertLevel1 = getMenuItemByName(menuItems,"V1")
   conf.battAlertLevel2 = getMenuItemByName(menuItems,"V2")
-  conf.battCapOverride1 = getMenuItemByName(menuItems,"B1")
-  conf.battCapOverride2 = getMenuItemByName(menuItems,"B2")
   conf.disableAllSounds = getMenuItemByName(menuItems,"S1")
   conf.disableMsgBeep = getMenuItemByName(menuItems,"S2")
   conf.enableHaptic = getMenuItemByName(menuItems,"VIBR")
@@ -376,9 +368,6 @@ local function applyConfigValues(conf)
   conf.maxAltitudeAlert = getMenuItemByName(menuItems,"A2")
   conf.maxDistanceAlert = getMenuItemByName(menuItems,"D1")
   conf.repeatAlertsPeriod = getMenuItemByName(menuItems,"T2")
-  conf.battConf = getMenuItemByName(menuItems,"BC")
-  conf.cell1Count = getMenuItemByName(menuItems,"CC")
-  conf.cell2Count = getMenuItemByName(menuItems,"CC2")
   conf.rangeFinderMax = getMenuItemByName(menuItems,"RM")
   conf.horSpeedMultiplier, conf.horSpeedLabel = getMenuItemByName(menuItems,"HSPD")
   conf.vertSpeedMultiplier, conf.vertSpeedLabel = getMenuItemByName(menuItems,"VSPD")
@@ -417,11 +406,6 @@ local function applyConfigValues(conf)
   conf.mapProvider = getMenuItemByName(menuItems,"MAPP")
 
   conf.screenWheelChannelDelay = getMenuItemByName(menuItems,"SWCD")
-
-  -- set default voltage source
-  if getMenuItemByName(menuItems,"VS") ~= nil then
-    conf.defaultBattSource = getMenuItemByName(menuItems,"VS")
-  end
   conf.gpsFormat = getMenuItemByName(menuItems,"GPS")
 
   conf.plotSource1 = getMenuItemByName(menuItems,"PLT1")

@@ -35,12 +35,6 @@ local menuItems = {
   {"voice language:", "L1", 1, { "eng", "ita", "fre", "ger" } , {"en","it","fr","de"} },
   {"batt alert level 1:", "V1", 375, 0,5000,"V",PREC2,5 },
   {"batt alert level 2:", "V2", 350, 0,5000,"V",PREC2,5 },
-  {"batt[1] cap override:", "B1", 0, 0,5000,"Ah",PREC2,10 },
-  {"batt[2] cap override:", "B2", 0, 0,5000,"Ah",PREC2,10 },
-  {"batt[1] cells override:", "CC", 0, 0,16,"s",0,1 },
-  {"batt[2] cells override:", "CC2", 0, 0,16,"s",0,1 },
-  {"dual battery conf:", "BC", 1, { "par", "ser", "other-1", "other-2" }, { 1, 2, 3, 4 } },
-  {"def voltage source:", "VS", 1, { "auto", "FLVSS", "fc" }, { nil, "vs", "fc" } },
   {"disable all sounds:", "S1", 1, { "no", "yes" }, { false, true } },
   {"disable msg beep:", "S2", 1, { "no", "info", "all" }, { 1, 2, 3 } },
   {"enable haptic:", "VIBR", 1, { "no", "yes" }, { false, true } },
@@ -107,8 +101,6 @@ local function applyConfigValues(items,conf)
   conf.language = getMenuItemByName(items,"L1")
   conf.battAlertLevel1 = getMenuItemByName(items,"V1")
   conf.battAlertLevel2 = getMenuItemByName(items,"V2")
-  conf.battCapOverride1 = getMenuItemByName(items,"B1")
-  conf.battCapOverride2 = getMenuItemByName(items,"B2")
   conf.disableAllSounds = getMenuItemByName(items,"S1")
   conf.disableMsgBeep = getMenuItemByName(items,"S2")
   conf.timerAlert = math.floor(getMenuItemByName(items,"T1")*0.1*60)
@@ -116,9 +108,6 @@ local function applyConfigValues(items,conf)
   conf.maxAltitudeAlert = getMenuItemByName(items,"A2")
   conf.maxDistanceAlert = getMenuItemByName(items,"D1")
   conf.repeatAlertsPeriod = getMenuItemByName(items,"T2")
-  conf.battConf = getMenuItemByName(items,"BC")
-  conf.cell1Count = getMenuItemByName(items,"CC")
-  conf.cell2Count = getMenuItemByName(items,"CC2")
   conf.rangeFinderMax = getMenuItemByName(items,"RM")
   conf.horSpeedMultiplier, conf.horSpeedLabel = getMenuItemByName(items,"HSPD")
   conf.vertSpeedMultiplier, conf.vertSpeedLabel = getMenuItemByName(items,"VSPD")
@@ -127,10 +116,6 @@ local function applyConfigValues(items,conf)
   conf.rightPanel = rightPanelFiles[getMenuItemByName(items,"RPANE")]
   conf.leftPanel = leftPanelFiles[getMenuItemByName(items,"LPANE")]
   conf.altView = altViewFiles[getMenuItemByName(items,"AVIEW")]
-
-  if getMenuItemByName(items,"VS") ~= nil then
-    conf.defaultBattSource = getMenuItemByName(items,"VS")
-  end
 
   conf.enableHaptic = getMenuItemByName(items,"VIBR")
   menu.editSelected = false

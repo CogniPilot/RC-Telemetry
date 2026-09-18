@@ -48,10 +48,12 @@ module. The FrSky S.Port path of the original project has been removed.
    value so the configuration file is written for this model. A long press on
    *Menu* over the widget reopens it later.
 
-The battery percentage is the one the flight controller reports in the CRSF
-battery frame, which EdgeTX turns into the `Bat%` sensor. The widget shows it
-as it arrives and estimates nothing; until `Bat%` has been discovered it shows
-99 as a placeholder.
+The battery values are the ones the flight controller reports, so *Yaapu
+Config* has no battery options beyond the two low voltage alert levels. The
+percentage is the `Bat%` sensor EdgeTX makes from the CRSF battery frame, shown
+as it arrives and estimated from nothing; until `Bat%` has been discovered it
+shows 99 as a placeholder. The cell count follows the pack voltage, and a
+second battery appears only when its telemetry does.
 
 Check: the horizon follows the board when it is tilted, the mode line reads
 the flight mode with `DISARMED` until the vehicle arms, the satellite count
