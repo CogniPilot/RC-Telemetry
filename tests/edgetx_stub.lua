@@ -9,6 +9,7 @@
 -- stub.calls                                            recorded API calls
 -- stub.sensors                                          last setTelemetryValue per name
 -- stub.telemetry                                        the script's telemetry table
+-- stub.loaded                                           loadScript paths that resolved
 --
 local stub = {}
 
@@ -68,6 +69,37 @@ setmetatable(_G, {
     return nil
   end,
 })
+
+-- Key events are the exception: their values decide which page a script opens,
+-- so they keep the EdgeTX layout instead of an arbitrary number. On the black
+-- and white radios the scripts see the physical break/long/repeat events and
+-- EVT_VIRTUAL_* are aliases for them, while the plain numbers the scripts also
+-- compare against (33..36, 128) are the colour radio values of the same keys.
+local KEY_BREAK, KEY_REPT, KEY_FIRST, KEY_LONG = 0x200, 0x400, 0x600, 0x800
+local KEY_MENU, KEY_EXIT, KEY_ENTER, KEY_MINUS, KEY_PLUS = 0, 1, 2, 3, 4
+
+EVT_MENU_BREAK = KEY_BREAK + KEY_MENU
+EVT_EXIT_BREAK = KEY_BREAK + KEY_EXIT
+EVT_ENTER_BREAK = KEY_BREAK + KEY_ENTER
+EVT_MINUS_BREAK = KEY_BREAK + KEY_MINUS
+EVT_PLUS_BREAK = KEY_BREAK + KEY_PLUS
+EVT_MINUS_REPT = KEY_REPT + KEY_MINUS
+EVT_PLUS_REPT = KEY_REPT + KEY_PLUS
+EVT_ROT_LEFT = KEY_FIRST + KEY_MINUS
+EVT_ROT_RIGHT = KEY_FIRST + KEY_PLUS
+EVT_MENU_LONG = KEY_LONG + KEY_MENU
+EVT_EXIT_LONG = KEY_LONG + KEY_EXIT
+EVT_ENTER_LONG = KEY_LONG + KEY_ENTER
+
+EVT_VIRTUAL_MENU = EVT_MENU_BREAK
+EVT_VIRTUAL_MENU_LONG = EVT_MENU_LONG
+EVT_VIRTUAL_EXIT = EVT_EXIT_BREAK
+EVT_VIRTUAL_ENTER = EVT_ENTER_BREAK
+EVT_VIRTUAL_ENTER_LONG = EVT_ENTER_LONG
+EVT_VIRTUAL_PREV = EVT_ROT_LEFT
+EVT_VIRTUAL_NEXT = EVT_ROT_RIGHT
+EVT_VIRTUAL_PREV_REPT = EVT_MINUS_REPT
+EVT_VIRTUAL_NEXT_REPT = EVT_PLUS_REPT
 
 -------------------------------------------------------------------------------
 -- EdgeTX runs Lua 5.2 where string.format("%d", 1.5) truncates instead of
@@ -139,7 +171,9 @@ end
 -------------------------------------------------------------------------------
 function loadScript(path)
   local real = resolve(path)
+  record("loadScript", path, real)
   if real == nil then return nil end
+  stub.loaded[path] = (stub.loaded[path] or 0) + 1
   return instrument(assert(loadfile(real)))
 end
 
@@ -283,7 +317,7 @@ function stub.reset(opts)
     { name = "RPM",  id = 0x0C,   instance = 3 },
   }
   stub.queue, stub.queueIdx = {}, 1
-  stub.calls, stub.sensors, stub.timers = {}, {}, {}
+  stub.calls, stub.sensors, stub.timers, stub.loaded = {}, {}, {}, {}
   stub.telemetry = nil
   LCD_W, LCD_H = opts.lcdw, opts.lcdh
 end

@@ -71,7 +71,7 @@ local conf = {
 
 local function doLibrary(filename)
   local success,f = pcall(loadScript, libBasePath..filename..".lua")
-  if success then
+  if success and f ~= nil then
     local ret = f()
     doGarbageCollect()
     return ret

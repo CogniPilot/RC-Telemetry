@@ -372,7 +372,7 @@ end
 
 local function doLibrary(filename)
   local success,f = pcall(loadScript,libBasePath..filename..".lua")
-  if success then
+  if success and f ~= nil then
     local ret = f()
     doGarbageCollect()
     return ret
@@ -1567,10 +1567,13 @@ local function run(event)
 
     if event == EVT_EXIT_BREAK then
       showConfigMenu = false
-      -- unload MENU
-      menuLib.saveConfig(conf)
-      clearTable(menuLib)
-      menuLib = nil
+      -- unload MENU, it is only there from loadCycle 4 on so an early exit
+      -- has nothing to save
+      if menuLib ~= nil then
+        menuLib.saveConfig(conf)
+        clearTable(menuLib)
+        menuLib = nil
+      end
       doGarbageCollect()
     end
   else
