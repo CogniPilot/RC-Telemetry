@@ -8,7 +8,7 @@ widget's Google layout:
     <out>/GoogleSatelliteMap/<zoom>/<tile_y>/s_<tile_x>.jpg
 
 On the radio select map provider "Google" and map type "GoogleSatelliteMap"
-in Yaapu Config. Zoom levels 12 to 17 are the range the config menu offers.
+in Yaapu Config. Zoom levels 12 to 18 are the range the config menu offers.
 
 Usage:
     make_map_tiles.py LAT LON RADIUS_KM [--out DIR] [--zooms 12-17]

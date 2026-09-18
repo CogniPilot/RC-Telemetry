@@ -101,9 +101,9 @@ local menuItems = {
   {"GPS coordinates format:", "GPS", 1, { "DMS", "decimal" }, { 1, 2 } },
   {"map provider:", "MAPP", 2, { "GMapCatcher", "Google", "QGIS" }, { 1, 2, 3 } },
   {"map type:", "MAPT", 1, { "", "", "", "", "", "" }, { "", "", "", "", "", "" } },
-  {"map zoom level def value:", "MAPZ", 16, -2, 17,nil,0,1 },
-  {"map zoom level min value:", "MAPmZ", 12, -2, 17,nil,0,1 },
-  {"map zoom level max value:", "MAPMZ", 17, -2, 17,nil,0,1 },
+  {"map zoom level def value:", "MAPZ", 16, -2, 18,nil,0,1 },
+  {"map zoom level min value:", "MAPmZ", 12, -2, 18,nil,0,1 },
+  {"map zoom level max value:", "MAPMZ", 18, -2, 18,nil,0,1 },
   {"map grid lines:", "MAPG", 1, { "yes", "no" }, { true, false } },
   -- allow up to 20 plot sources to be defined by updateMenuItems()
   {"plot telemetry source 1:", "PLT1", 1, { "","","","","","","","","","","","","","","","","","","","","","","","","","","","","","" }, { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30 } },

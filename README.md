@@ -102,18 +102,20 @@ The widget's pages are chosen with its "Screen Type" option: 1 is the HUD,
 2 the message history, 5 the satellite map (6 plot, 7 and 8 statistics). Put a
 second `yaapu` widget on another screen with Screen Type 5, or use the page
 toggle in Yaapu Config. The widget defaults to map provider `Google`, map type
-`GoogleSatelliteMap`, zoom 16 (12 to 17), which matches the shipped tiles; a
+`GoogleSatelliteMap`, zoom 16 (12 to 18), which matches the shipped tiles; the
+wheel zooms in and out on the map page while it is full screen; a
 change in Yaapu Config is only written when the edited value is confirmed with
 ENTER. The map centres on the aircraft's GPS position from the `GPS` telemetry
 sensor, so the sensors must have been discovered (see above), and it draws
 once there is a fix.
 
-The shipped tiles cover an 8 km radius around Lafayette, Indiana. Tiles for
-another area are one command, then copy `OTX_ETX/color_common/SD/IMAGES` to
-the card again:
+The shipped tiles cover an 8 km radius around Lafayette, Indiana at zoom 12
+to 17, and a 3 km radius at zoom 18. Tiles for another area are one command
+each, then copy `OTX_ETX/color_common/SD/IMAGES` to the card again:
 
 ```
-tools/make_map_tiles.py LAT LON RADIUS_KM
+tools/make_map_tiles.py LAT LON 8
+tools/make_map_tiles.py LAT LON 3 --zooms 18-18
 ```
 
 ## Firmware side

@@ -63,7 +63,7 @@ local conf = {
   -- map support
   mapType = "GoogleSatelliteMap",
   mapZoomLevel = 16,
-  mapZoomMax = 17,
+  mapZoomMax = 18,
   mapZoomMin = 12,
   enableMapGrid = true,
   screenToggleChannelId = 0,
@@ -2755,7 +2755,22 @@ local fgTasks = {
 }
 
 -- Called when script is visible
-local function drawFullScreen(widget)
+-- one zoom step in or out on the map page from the wheel; the GMapCatcher
+-- provider counts levels the other way round
+local function mapZoomStep(step)
+  local dir = conf.mapProvider == 1 and -step or step
+  status.mapZoomLevel = math.min(math.max(status.mapZoomLevel + dir, conf.mapZoomMin), conf.mapZoomMax)
+end
+
+local function mapZoomEvents(event, touchState)
+  if event == EVT_VIRTUAL_INC then
+    mapZoomStep(1)
+  elseif event == EVT_VIRTUAL_DEC then
+    mapZoomStep(-1)
+  end
+end
+
+local function drawFullScreen(widget, event, touchState)
   -- when page 1 goes to foreground run bg tasks
   if math.max(1,widget.options["Screen Type"]) == 1 then
     -- run bg tasks only if we are not resetting, this prevent cpu limit kill
@@ -2785,6 +2800,7 @@ local function drawFullScreen(widget)
       lcd.clear(CUSTOM_COLOR)
 
       if mapLayout ~= nil then
+        mapZoomEvents(event, touchState)
         mapLayout.draw(widget)
       else
         loadMapLayout()
@@ -2851,11 +2867,11 @@ local function drawScreen(widget, event, touchState)
       fullScreenRequired(widget)
       return
     end
-    drawFullScreen(widget)
+    drawFullScreen(widget, event, touchState)
 end
 
-function refresh(widget)
-  drawScreen(widget)
+function refresh(widget, event, touchState)
+  drawScreen(widget, event, touchState)
 end
 
 return { name="Yaapu", options=options, create=create, update=update, background=background, refresh=refresh }
